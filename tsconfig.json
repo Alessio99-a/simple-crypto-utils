@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    "module": "ESNext",
+    "target": "ES2020",
+    "moduleResolution": "node", // <--- cambiamo qui
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+
+    "isolatedModules": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"]
+}
