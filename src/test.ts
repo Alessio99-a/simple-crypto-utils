@@ -1,6 +1,5 @@
 import { decrypt, encrypt } from "./crypto";
-import { generateUUID } from "./uuid";
-import { hash } from "./hash";
+import { hashHmac, verifyHmac } from "./hash";
 // Example usage
 const password = "myStrongPassword!";
 const encrypted = encrypt(
@@ -8,9 +7,7 @@ const encrypted = encrypt(
   password
 );
 const decrypted = decrypt(encrypted, password);
-
-console.log(generateUUID());
-console.log(hash("erbert"));
+const hashedHmac = hashHmac("erbert", "erbert");
 
 //compila
 //npx tsc
