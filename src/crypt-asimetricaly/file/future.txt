@@ -1,0 +1,201 @@
+import {
+  readdirSync,
+  statSync,
+  mkdirSync,
+  existsSync,
+  writeFileSync,
+  readFileSync,
+} from "fs";
+import { join, relative, dirname, basename } from "path";
+import { encryptFile } from "./encryptFile";
+import { decryptFile } from "./decryptFile";
+import { randomBytes, publicEncrypt, privateDecrypt, constants } from "crypto";
+
+interface FolderMetadata {
+  encryptedAESKey: string; // RSA-encrypted AES key (base64)
+  files: Array<{
+    originalPath: string; // relative path in original folder
+    encryptedPath: string; // where the encrypted file is stored
+    isDirectory: boolean;
+  }>;
+}
+
+/**
+ * Encrypts an entire folder structure
+ * - Each file gets its own unique IV
+ * - All files share the same AES key (encrypted with RSA)
+ * - Preserves folder structure
+ */
+export async function encryptFolder(
+  inputFolder: string,
+  outputFolder: string,
+  publicKey: string
+) {
+  // 1️⃣ Generate one AES key for the entire folder
+  const masterAESKey = randomBytes(32);
+
+  // 2️⃣ Encrypt the master key with RSA
+  const encryptedAESKey = publicEncrypt(
+    {
+      key: publicKey,
+      padding: constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    masterAESKey
+  );
+
+  // 3️⃣ Create output folder
+  if (!existsSync(outputFolder)) {
+    mkdirSync(outputFolder, { recursive: true });
+  }
+
+  // 4️⃣ Get all files recursively
+  const files = getAllFiles(inputFolder);
+  console.log(`📁 Found ${files.length} files to encrypt`);
+
+  // 5️⃣ Prepare metadata
+  const metadata: FolderMetadata = {
+    encryptedAESKey: encryptedAESKey.toString("base64"),
+    files: [],
+  };
+
+  // 6️⃣ Encrypt each file
+  let encryptedCount = 0;
+  for (const filePath of files) {
+    const relativePath = relative(inputFolder, filePath);
+    const stat = statSync(filePath);
+
+    if (stat.isDirectory()) {
+      // Just record the directory in metadata
+      metadata.files.push({
+        originalPath: relativePath,
+        encryptedPath: "",
+        isDirectory: true,
+      });
+    } else {
+      // Encrypt the file
+      const encryptedFileName = `${encryptedCount}.enc`;
+      const encryptedPath = join(outputFolder, encryptedFileName);
+
+      console.log(`🔐 Encrypting: ${relativePath}`);
+      await encryptFile(filePath, encryptedPath, publicKey);
+
+      metadata.files.push({
+        originalPath: relativePath,
+        encryptedPath: encryptedFileName,
+        isDirectory: false,
+      });
+
+      encryptedCount++;
+    }
+  }
+
+  // 7️⃣ Save metadata
+  const metadataPath = join(outputFolder, "metadata.json");
+  writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+
+  console.log(`✅ Folder encrypted successfully`);
+  console.log(`   Files encrypted: ${encryptedCount}`);
+  console.log(`   Output: ${outputFolder}`);
+}
+
+/**
+ * Decrypts an entire folder structure
+ * - Restores original folder structure
+ * - Decrypts all files using the master AES key
+ */
+export async function decryptFolder(
+  encryptedFolder: string,
+  outputFolder: string,
+  privateKey: string
+) {
+  // 1️⃣ Read metadata
+  const metadataPath = join(encryptedFolder, "metadata.json");
+  if (!existsSync(metadataPath)) {
+    throw new Error("Metadata file not found. Invalid encrypted folder.");
+  }
+
+  const metadata: FolderMetadata = JSON.parse(
+    readFileSync(metadataPath, "utf8")
+  );
+
+  // 2️⃣ Create output folder
+  if (!existsSync(outputFolder)) {
+    mkdirSync(outputFolder, { recursive: true });
+  }
+
+  // 3️⃣ Decrypt each file
+  let decryptedCount = 0;
+  for (const fileInfo of metadata.files) {
+    if (fileInfo.isDirectory) {
+      // Recreate directory
+      const dirPath = join(outputFolder, fileInfo.originalPath);
+      if (!existsSync(dirPath)) {
+        mkdirSync(dirPath, { recursive: true });
+      }
+    } else {
+      // Decrypt file
+      const encryptedPath = join(encryptedFolder, fileInfo.encryptedPath);
+      const decryptedPath = join(outputFolder, fileInfo.originalPath);
+
+      // Create parent directory if needed
+      const parentDir = dirname(decryptedPath);
+      if (!existsSync(parentDir)) {
+        mkdirSync(parentDir, { recursive: true });
+      }
+
+      console.log(`🔓 Decrypting: ${fileInfo.originalPath}`);
+      await decryptFile(encryptedPath, decryptedPath, privateKey);
+
+      decryptedCount++;
+    }
+  }
+
+  console.log(`✅ Folder decrypted successfully`);
+  console.log(`   Files decrypted: ${decryptedCount}`);
+  console.log(`   Output: ${outputFolder}`);
+}
+
+/**
+ * Recursively get all files and directories in a folder
+ */
+function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
+  const files = readdirSync(dirPath);
+
+  files.forEach((file) => {
+    const filePath = join(dirPath, file);
+    const stat = statSync(filePath);
+
+    if (stat.isDirectory()) {
+      arrayOfFiles.push(filePath);
+      getAllFiles(filePath, arrayOfFiles);
+    } else {
+      arrayOfFiles.push(filePath);
+    }
+  });
+
+  return arrayOfFiles;
+}
+
+// Example usage:
+/*
+import { generateRSAKeyPair } from "./generateRSAKeyPair";
+
+async function testFolderEncryption() {
+  const { publicKey, privateKey } = await generateRSAKeyPair();
+
+  // Encrypt a folder
+  await encryptFolder(
+    "./my-documents",
+    "./my-documents.encrypted",
+    publicKey
+  );
+
+  // Decrypt the folder
+  await decryptFolder(
+    "./my-documents.encrypted",
+    "./my-documents.decrypted",
+    privateKey
+  );
+}
+*/
