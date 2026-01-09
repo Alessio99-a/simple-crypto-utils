@@ -15,7 +15,7 @@ async function scryptTyped(
   return result;
 }
 
-export async function verifyPassword(
+export async function validate(
   password: string,
   storedHash: string
 ): Promise<boolean> {

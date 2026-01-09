@@ -1,7 +1,6 @@
 import { randomBytes } from "crypto";
-import { hashPassword } from "./hash";
 
-interface PasswordOptions {
+export interface PasswordOptions {
   length?: number;
   hash?: boolean;
   letters?: boolean;
@@ -16,16 +15,14 @@ const charsetMap: Readonly<Record<string, string>> = {
 };
 
 // Conditional return type
-export function generatePassword(length?: number): string;
-export function generatePassword(
-  options: PasswordOptions & { hash?: false }
-): string;
-export function generatePassword(
+export function generate(length?: number): string;
+export function generate(options: PasswordOptions & { hash?: false }): string;
+export function generate(
   options: PasswordOptions & { hash: true }
 ): Promise<string>;
 
 // Implementation
-export function generatePassword(
+export function generate(
   lengthOrOptions?: number | PasswordOptions
 ): string | Promise<string> {
   let length = 16;
@@ -63,10 +60,9 @@ export function generatePassword(
     (byte) => charset[byte % charset.length]
   ).join("");
 
-  if (hash) {
-    // Return a Promise only if hash is true
-    return hashPassword(password);
-  }
+  // if (hash) {
+  //   return hash(password);
+  // }
 
   return password;
 }

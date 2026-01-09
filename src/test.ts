@@ -1,25 +1,53 @@
-import { generateRSAKeyPair } from "./crypt-asimetricaly";
-import { encryptString } from "./crypt-asimetricaly";
-import { decryptString } from "./crypt-asimetricaly";
-import { encryptFile } from "./crypt-asimetricaly/file/encryptFile";
-import * as path from "path";
-import { fileURLToPath } from "url";
-import { decryptFile } from "./crypt-asimetricaly/file/decryptFile";
-import { randomFillSync } from "crypto";
+import { decrypt } from "./crypto/decrypt";
+import { encrypt } from "./crypto/encrypt";
+import { Key } from "./keys";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const inputPath = path.join(__dirname, "../test.txt"); // points to root
-const outputPath = path.join(__dirname, "../test.enc"); // output file in root
-const thridPath = path.join(__dirname, "../decrypted.txt");
 async function test() {
-  const { publicKey, privateKey } = await generateRSAKeyPair();
+  const newKeys = await Key.generate("seal");
+  console.log(newKeys);
 
-  const file = await encryptFile(inputPath, outputPath, publicKey);
-  //console.log(privateKey);
-  const decrypt = decryptFile(outputPath, thridPath, privateKey);
+  // ✅ Encrypt with consistent parameter order
+  const encrypted1 = await encrypt(
+    { type: "sealEnvelope", recipientPublicKey: newKeys.publicKey as string },
+    "Hello World"
+  );
+
+  // ✅ Decrypt
+  const decrypted1 = await decrypt(
+    { type: "openEnvelope", recipientPrivateKey: newKeys.privateKey as string },
+    encrypted1.data!
+  );
+  console.log(decrypted1.data); // "Hello World"
+
+  // ✅ Encrypt an object
+  const encrypted2 = await encrypt(
+    { type: "sealEnvelope", recipientPublicKey: newKeys.publicKey as string },
+    { user: "Alice", age: 30 }
+  );
+
+  // ✅ Decrypt
+  const decrypted2 = await decrypt(
+    { type: "openEnvelope", recipientPrivateKey: newKeys.privateKey as string },
+    encrypted2.data!
+  );
+  console.log(decrypted2.data); // { user: "Alice", age: 30 }
+
+  // // ✅ File encryption/decryption
+  // await encrypt(
+  //   { type: "symmetric-password", password: "secret" },
+  //   Buffer.from(""), // dummy buffer for file mode
+  //   "./input.txt",
+  //   "./encrypted.bin"
+  // );
+
+  // await decrypt(
+  //   { type: "symmetric-password", password: "secret" },
+  //   "", // dummy string for file mode
+  //   "./encrypted.bin",
+  //   "./decrypted.txt"
+  // );
 }
+
 test();
 //compila
 //npx tsc
@@ -28,4 +56,12 @@ test();
 
 /*
 npx tsx src/test.ts 
+npx tsx src/test.ts --verbose
 */
+
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
+
+// const inputPath = path.join(__dirname, "../test.txt");
+// const outputPath = path.join(__dirname, "../test.enc");
+// const thridPath = path.join(__dirname, "../decrypted.txt");
