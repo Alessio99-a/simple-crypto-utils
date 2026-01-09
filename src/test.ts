@@ -2,32 +2,57 @@ import { decrypt } from "./crypto/decrypt";
 import { encrypt } from "./crypto/encrypt";
 import { Key } from "./keys";
 
+/*
+ Key {
+  publicKey: 'BHaHij3c2Yuyk4Ko3h6FhDWrrI7OMg1LWV+xxUYJnXLllEoMNyXly77azbKP189Y5RJJw8QDQZZHYKtYk6q81ws=',
+  privateKey: 'L+m9FVhfWryoPVqzDS4eRpJJKykJz/55t0FSoCt2cos='
+}*/
 async function test() {
-  const newKeys = await Key.generate("seal");
+  const newKeys = await Key.generate("channel");
   console.log(newKeys);
 
   // ✅ Encrypt with consistent parameter order
   const encrypted1 = await encrypt(
-    { type: "sealEnvelope", recipientPublicKey: newKeys.publicKey as string },
+    {
+      type: "secure-channel",
+      recipientPublicKey:
+        "BHaHij3c2Yuyk4Ko3h6FhDWrrI7OMg1LWV+xxUYJnXLllEoMNyXly77azbKP189Y5RJJw8QDQZZHYKtYk6q81ws=",
+      senderPrivateKey: newKeys.privateKey as string,
+    },
     "Hello World"
   );
 
   // ✅ Decrypt
   const decrypted1 = await decrypt(
-    { type: "openEnvelope", recipientPrivateKey: newKeys.privateKey as string },
+    {
+      type: "secure-channel",
+      recipientPrivateKey:
+        "L+m9FVhfWryoPVqzDS4eRpJJKykJz/55t0FSoCt2cos=" as string,
+      senderPublicKey: newKeys.publicKey as string,
+    },
     encrypted1.data!
   );
   console.log(decrypted1.data); // "Hello World"
 
   // ✅ Encrypt an object
   const encrypted2 = await encrypt(
-    { type: "sealEnvelope", recipientPublicKey: newKeys.publicKey as string },
+    {
+      type: "secure-channel",
+      recipientPublicKey:
+        "BHaHij3c2Yuyk4Ko3h6FhDWrrI7OMg1LWV+xxUYJnXLllEoMNyXly77azbKP189Y5RJJw8QDQZZHYKtYk6q81ws=",
+      senderPrivateKey: newKeys.privateKey as string,
+    },
     { user: "Alice", age: 30 }
   );
 
   // ✅ Decrypt
   const decrypted2 = await decrypt(
-    { type: "openEnvelope", recipientPrivateKey: newKeys.privateKey as string },
+    {
+      type: "secure-channel",
+      recipientPrivateKey:
+        "L+m9FVhfWryoPVqzDS4eRpJJKykJz/55t0FSoCt2cos=" as string,
+      senderPublicKey: newKeys.publicKey as string,
+    },
     encrypted2.data!
   );
   console.log(decrypted2.data); // { user: "Alice", age: 30 }

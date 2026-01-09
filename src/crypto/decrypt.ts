@@ -21,12 +21,14 @@ interface FileHeader {
 
 type EncryptionType = "symmetric-password" | "openEnvelope" | "secure-channel";
 
-interface DecryptOptions {
-  type: EncryptionType;
-  password?: string; // for symmetric
-  recipientPrivateKey?: string; // for RSA modes
-  senderPublicKey?: string; // for ECDH
-}
+type DecryptOptions =
+  | { type: "symmetric-password"; password: string }
+  | { type: "openEnvelope"; recipientPrivateKey: string }
+  | {
+      type: "secure-channel";
+      recipientPrivateKey: string;
+      senderPublicKey: string;
+    };
 
 interface DecryptResult {
   type: "file" | "message";
@@ -193,7 +195,7 @@ async function decryptFileStreaming(
       break;
 
     default:
-      throw new Error(`Unsupported decryption type: ${options.type}`);
+      throw new Error(`Unsupported decryption type: ${options}`);
   }
 
   // Create read stream starting at encrypted data offset
@@ -330,7 +332,7 @@ function decryptMessage(
       break;
 
     default:
-      throw new Error(`Unsupported decryption type: ${options.type}`);
+      throw new Error(`Unsupported decryption type: ${options}`);
   }
 
   // Return based on type flag

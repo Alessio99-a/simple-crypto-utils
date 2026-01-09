@@ -13,6 +13,18 @@ import { pipeline } from "stream/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 
+/**
+ * Result of encryption
+ */
+interface EncryptResult {
+  /** Type of encrypted output: "file" for file output, "message" for in-memory hex string */
+  type: "file" | "message";
+  /** Hex string of encrypted message (for type "message") */
+  data?: string;
+  /** Path to encrypted file (for type "file") */
+  outputPath?: string;
+}
+
 interface FileHeader {
   encryptedKey?: string; // base64 - for RSA modes
   iv: string; // base64
@@ -22,19 +34,108 @@ interface FileHeader {
 
 type EncryptionType = "symmetric-password" | "sealEnvelope" | "secure-channel";
 
-interface EncryptOptions {
-  type: EncryptionType;
-  password?: string; // for symmetric
-  recipientPublicKey?: string; // for RSA/ECDH
-  senderPrivateKey?: string; // for ECDH
-  stream?: boolean; // true for big files
-}
+type EncryptOptions =
+  | { type: "symmetric-password"; password: string; stream?: boolean }
+  | { type: "sealEnvelope"; recipientPublicKey: string; stream?: boolean }
+  | {
+      type: "secure-channel";
+      senderPrivateKey: string;
+      recipientPublicKey: string;
+      stream?: boolean;
+    };
 
 interface EncryptResult {
   type: "file" | "message";
   data?: string; // hex string for messages
   outputPath?: string; // for files
 }
+
+// Message mode
+/**
+ * Encrypt a message with a password
+ * @param options.type "symmetric-password"
+ * @param options.password Required password for AES-256-GCM
+ * @param options.stream Optional, use streaming for large files
+ * @param data The data to encrypt (string, Buffer, or JSON-serializable object)
+ * @returns Hex string wrapped in EncryptResult
+ * @example
+ * ```ts
+ * const result = await encrypt({ type: "symmetric-password", password: "secret" }, "Hello");
+ * console.log(result.data); // Hex string
+ * ```
+ */
+function encrypt(
+  options: { type: "symmetric-password"; password: string; stream?: boolean },
+  data: string | object | Buffer
+): Promise<EncryptResult>;
+
+/**
+ * Encrypt a message for RSA envelope ("sealEnvelope")
+ * @param options.type "sealEnvelope"
+ * @param options.recipientPublicKey Recipient's public key (Base64)
+ * @param options.stream Optional, use streaming for large files
+ * @param data The data to encrypt (string, Buffer, or JSON-serializable object)
+ * @returns Hex string wrapped in EncryptResult
+ * @example
+ * ```ts
+ * const result = await encrypt({ type: "sealEnvelope", recipientPublicKey: pubKey }, "Hello");
+ * console.log(result.data); // Hex string
+ * ```
+ */
+function encrypt(
+  options: {
+    type: "sealEnvelope";
+    recipientPublicKey: string;
+    stream?: boolean;
+  },
+  data: string | object | Buffer
+): Promise<EncryptResult>;
+
+/**
+ * Encrypt a message for secure ECDH channel
+ * @param options.type "secure-channel"
+ * @param options.senderPrivateKey Sender's private key (Base64)
+ * @param options.recipientPublicKey Recipient's public key (Base64)
+ * @param options.stream Optional, use streaming for large files
+ * @param data The data to encrypt (string, Buffer, or JSON-serializable object)
+ * @returns Hex string wrapped in EncryptResult
+ * @example
+ * ```ts
+ * const result = await encrypt({ type: "secure-channel", senderPrivateKey: priv, recipientPublicKey: pub }, "Hello");
+ * console.log(result.data); // Hex string
+ * ```
+ */
+function encrypt(
+  options: {
+    type: "secure-channel";
+    senderPrivateKey: string;
+    recipientPublicKey: string;
+    stream?: boolean;
+  },
+  data: string | object | Buffer
+): Promise<EncryptResult>;
+
+// File mode
+/**
+ * File mode overload: encrypt a file with password
+ * @param options.type "symmetric-password"
+ * @param options.password Password string for encryption
+ * @param options.stream Optional streaming mode
+ * @param data Optional buffer (can be undefined if using file mode)
+ * @param inputPath Path to input file
+ * @param outputPath Path to write encrypted output file
+ * @returns EncryptResult with outputPath
+ * @example
+ * ```ts
+ * await encrypt({ type: "symmetric-password", password: "secret" }, undefined, "./input.txt", "./encrypted.bin");
+ * ```
+ */
+function encrypt(
+  options: { type: "symmetric-password"; password: string; stream?: boolean },
+  data: Buffer | Stream.Readable | string | object | undefined,
+  inputPath: string,
+  outputPath: string
+): Promise<EncryptResult>;
 
 /**
  * Main encryption function - handles both messages and files
@@ -177,7 +278,7 @@ async function encryptFileStreaming(
       break;
 
     default:
-      throw new Error(`Unsupported encryption type: ${options.type}`);
+      throw new Error(`Unsupported encryption type: ${options}`);
   }
 
   // Write final output with header
@@ -303,7 +404,7 @@ function encryptMessage(
       );
 
     default:
-      throw new Error(`Unsupported encryption type: ${options.type}`);
+      throw new Error(`Unsupported encryption type: ${options}`);
   }
 }
 
