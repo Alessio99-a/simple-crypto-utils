@@ -8,6 +8,8 @@ import {
   scryptSync,
   createECDH,
   createHash,
+  hkdf,
+  hkdfSync,
 } from "crypto";
 import { pipeline } from "stream/promises";
 import { tmpdir } from "os";
@@ -17,38 +19,27 @@ import { join } from "path";
  * Result of encryption
  */
 interface EncryptResult {
-  /** Type of encrypted output: "file" for file output, "message" for in-memory hex string */
   type: "file" | "message";
-  /** Hex string of encrypted message (for type "message") */
   data?: string;
-  /** Path to encrypted file (for type "file") */
   outputPath?: string;
 }
 
 interface FileHeader {
   encryptedKey?: string; // base64 - for RSA modes
+  ephemeralPublicKey?: string; // base64 - for ECDH mode ← ADD THIS
   iv: string; // base64
   authTag: string; // base64
-  salt?: string; // base64 - for password mode
+  salt?: string; // base64 - for password mode AND ECDH mode ← UPDATED
 }
-
-type EncryptionType = "symmetric-password" | "sealEnvelope" | "secure-channel";
 
 type EncryptOptions =
   | { type: "symmetric-password"; password: string; stream?: boolean }
   | { type: "sealEnvelope"; recipientPublicKey: string; stream?: boolean }
   | {
       type: "secure-channel";
-      senderPrivateKey: string;
       recipientPublicKey: string;
       stream?: boolean;
     };
-
-interface EncryptResult {
-  type: "file" | "message";
-  data?: string; // hex string for messages
-  outputPath?: string; // for files
-}
 
 // Message mode
 /**
@@ -94,7 +85,6 @@ function encrypt(
 /**
  * Encrypt a message for secure ECDH channel
  * @param options.type "secure-channel"
- * @param options.senderPrivateKey Sender's private key (Base64)
  * @param options.recipientPublicKey Recipient's public key (Base64)
  * @param options.stream Optional, use streaming for large files
  * @param data The data to encrypt (string, Buffer, or JSON-serializable object)
@@ -108,7 +98,6 @@ function encrypt(
 function encrypt(
   options: {
     type: "secure-channel";
-    senderPrivateKey: string;
     recipientPublicKey: string;
     stream?: boolean;
   },
@@ -239,7 +228,6 @@ async function encryptFileStreaming(
       await pipeline(inputStream, cipherSeal, tempStream);
       const authTagSeal = cipherSeal.getAuthTag();
 
-      // Encrypt the AES key with recipient's public key
       const encryptedAESKey = publicEncrypt(
         {
           key: options.recipientPublicKey,
@@ -257,21 +245,27 @@ async function encryptFileStreaming(
       break;
 
     case "secure-channel":
-      if (!options.senderPrivateKey || !options.recipientPublicKey) {
-        throw new Error(
-          "Both sender and recipient keys required for secure channel"
-        );
+      if (!options.recipientPublicKey) {
+        throw new Error("Recipient public key required for secure channel");
       }
-      const sharedSecret = deriveAESKeyFromECDH(
-        options.senderPrivateKey,
+
+      // Generate ephemeral key - FIX: use correct variable names
+      const ephemeralData = deriveAESKeyForEncryption(
         options.recipientPublicKey
       );
 
-      const cipherECDH = createCipheriv("aes-256-gcm", sharedSecret, iv);
+      // FIX: Use the returned aesKey, not the random one
+      const cipherECDH = createCipheriv(
+        "aes-256-gcm",
+        ephemeralData.aesKey,
+        iv
+      );
       await pipeline(inputStream, cipherECDH, tempStream);
       const authTagECDH = cipherECDH.getAuthTag();
 
       header = {
+        ephemeralPublicKey: ephemeralData.ephemeralPublicKey,
+        salt: ephemeralData.salt.toString("base64"),
         iv: iv.toString("base64"),
         authTag: authTagECDH.toString("base64"),
       };
@@ -288,15 +282,12 @@ async function encryptFileStreaming(
 
   const outputStream = createWriteStream(outputPath);
 
-  // Write header first
   outputStream.write(headerLengthBuf);
   outputStream.write(headerJson);
 
-  // Stream encrypted data from temp file
   const tempReadStream = createReadStream(tempPath);
   await pipeline(tempReadStream, outputStream);
 
-  // Clean up temp file
   try {
     const { unlinkSync } = await import("fs");
     unlinkSync(tempPath);
@@ -314,11 +305,8 @@ function encryptMessage(
   options: EncryptOptions,
   data: string | object | any
 ): string {
-  // Determine data type and serialize if needed
   const isString = typeof data === "string";
   const stringData = isString ? data : JSON.stringify(data);
-
-  // Type flag: 0x00 = string, 0x01 = json
   const typeFlag = Buffer.from([isString ? 0x00 : 0x01]);
 
   const iv = randomBytes(12);
@@ -339,7 +327,6 @@ function encryptMessage(
       ]);
       const tag = cipher.getAuthTag();
 
-      // Format: typeFlag(1) + salt(16) + iv(12) + tag(16) + encrypted
       return Buffer.concat([typeFlag, salt, iv, tag, encrypted]).toString(
         "hex"
       );
@@ -356,7 +343,6 @@ function encryptMessage(
       ]);
       const tagSeal = cipherSeal.getAuthTag();
 
-      // Encrypt the AES key with recipient's public key
       const encryptedKey = publicEncrypt(
         {
           key: options.recipientPublicKey,
@@ -366,12 +352,11 @@ function encryptMessage(
         aesKey
       );
 
-      // Format: typeFlag(1) + encryptedKeyLength(2) + encryptedKey + iv(12) + tag(16) + encrypted
       const keyLengthBuf = Buffer.alloc(2);
       keyLengthBuf.writeUInt16BE(encryptedKey.length, 0);
 
       return Buffer.concat([
-        typeFlag, // ← ADD THIS
+        typeFlag,
         keyLengthBuf,
         encryptedKey,
         iv,
@@ -380,28 +365,47 @@ function encryptMessage(
       ]).toString("hex");
 
     case "secure-channel":
-      if (!options.senderPrivateKey || !options.recipientPublicKey) {
-        throw new Error(
-          "Both sender and recipient keys required for secure channel"
-        );
+      if (!options.recipientPublicKey) {
+        throw new Error("Recipient public key required for secure channel");
       }
 
-      const sharedSecret = deriveAESKeyFromECDH(
-        options.senderPrivateKey,
+      // Generate ephemeral key and derive shared secret
+      const ephemeralData = deriveAESKeyForEncryption(
         options.recipientPublicKey
       );
 
-      const cipherECDH = createCipheriv("aes-256-gcm", sharedSecret, iv);
+      // FIX: Use the correct aesKey from ephemeralData
+      const cipherECDH = createCipheriv(
+        "aes-256-gcm",
+        ephemeralData.aesKey,
+        iv
+      );
       const encryptedECDH = Buffer.concat([
         cipherECDH.update(stringData, "utf8"),
         cipherECDH.final(),
       ]);
       const tagECDH = cipherECDH.getAuthTag();
 
-      // Format: typeFlag(1) + iv(12) + tag(16) + encrypted
-      return Buffer.concat([typeFlag, iv, tagECDH, encryptedECDH]).toString(
-        "hex"
+      // Format: typeFlag(1) + ephemeralPubKeyLen(2) + ephemeralPubKey + salt(16) + iv(12) + tag(16) + encrypted
+      const ephemeralKeyBuffer = Buffer.from(
+        ephemeralData.ephemeralPublicKey,
+        "base64"
       );
+      const ephemeralKeyLenBuf = Buffer.alloc(2);
+      ephemeralKeyLenBuf.writeUInt16BE(ephemeralKeyBuffer.length, 0);
+
+      // FIX: saltBuffer is already a Buffer, don't convert again
+      const saltBuffer = ephemeralData.salt;
+
+      return Buffer.concat([
+        typeFlag,
+        ephemeralKeyLenBuf,
+        ephemeralKeyBuffer,
+        saltBuffer,
+        iv,
+        tagECDH,
+        encryptedECDH,
+      ]).toString("hex");
 
     default:
       throw new Error(`Unsupported encryption type: ${options}`);
@@ -409,23 +413,62 @@ function encryptMessage(
 }
 
 /**
- * Derive AES key from ECDH shared secret
+ * Sender side: generates ephemeral key and derives AES key
+ * FIX: Return proper types and convert ArrayBuffer to Buffer
  */
-function deriveAESKeyFromECDH(
-  senderPrivateKeyStr: string,
-  recipientPublicKeyStr: string
-): Buffer {
-  const ecdh = createECDH("prime256v1");
+function deriveAESKeyForEncryption(recipientPublicKeyStr: string): {
+  aesKey: Buffer; // FIX: renamed from aesKeySecureChannel
+  ephemeralPublicKey: string;
+  salt: Buffer; // FIX: renamed from saltSecureChannel and changed type to Buffer
+} {
+  const ephemeral = createECDH("prime256v1");
+  ephemeral.generateKeys();
 
-  const senderPrivateKey = Buffer.from(senderPrivateKeyStr, "base64");
   const recipientPublicKey = Buffer.from(recipientPublicKeyStr, "base64");
+  const salt = randomBytes(16);
 
-  ecdh.setPrivateKey(senderPrivateKey);
-  const sharedSecret = ecdh.computeSecret(recipientPublicKey);
+  const sharedSecret = ephemeral.computeSecret(recipientPublicKey);
 
-  // Hash to get AES-256 key (32 bytes)
-  return createHash("sha256").update(sharedSecret).digest();
+  // FIX: Convert ArrayBuffer to Buffer
+  const aesKey = Buffer.from(
+    hkdfSync("sha256", sharedSecret, salt, "secure-channel as key", 32)
+  );
+
+  return {
+    aesKey,
+    ephemeralPublicKey: ephemeral.getPublicKey("base64"),
+    salt, // Already a Buffer, no conversion needed
+  };
+}
+
+/**
+ * Recipient side: derives AES key from ephemeral public key
+ */
+function deriveAESKeyForDecryption(
+  recipientPrivateKeyStr: string,
+  ephemeralPublicKeyStr: string,
+  salt: Buffer
+): Buffer {
+  const recipient = createECDH("prime256v1");
+  const recipientPrivateKey = Buffer.from(recipientPrivateKeyStr, "base64");
+  recipient.setPrivateKey(recipientPrivateKey);
+
+  const ephemeralPublicKey = Buffer.from(ephemeralPublicKeyStr, "base64");
+  const sharedSecret = recipient.computeSecret(ephemeralPublicKey);
+
+  // FIX: Convert ArrayBuffer to Buffer
+  const aesKey = Buffer.from(
+    hkdfSync("sha256", sharedSecret, salt, "secure-channel as key", 32)
+  );
+
+  return aesKey;
 }
 
 // Export functions
-export { encrypt, encryptFile, encryptMessage, deriveAESKeyFromECDH };
+export {
+  encrypt,
+  encryptMessage,
+  encryptFileStreaming,
+  deriveAESKeyForEncryption,
+  deriveAESKeyForDecryption,
+};

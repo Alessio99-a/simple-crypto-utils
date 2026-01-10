@@ -1,6 +1,6 @@
 import { generateECDHKeyPair } from "./ecdh";
 import { generateRSAKeyPair } from "./rsa";
-
+import { generateECDSAKeyPair } from "./ecdsa";
 export type keyType = "seal" | "sign" | "channel";
 
 export class Key {
@@ -16,13 +16,20 @@ export class Key {
         k.privateKey = privateKey;
         break;
       }
-      case "seal":
-      case "sign": {
+      case "seal": {
         const { publicKey, privateKey } = await generateRSAKeyPair();
         k.publicKey = publicKey;
         k.privateKey = privateKey;
         break;
       }
+
+      case "sign": {
+        const { publicKey, privateKey } = generateECDSAKeyPair();
+        k.publicKey = publicKey;
+        k.privateKey = privateKey;
+        break;
+      }
+
       default:
         throw new Error(`Unknown key type: ${key}`);
     }

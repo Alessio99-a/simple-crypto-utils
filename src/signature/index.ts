@@ -20,7 +20,7 @@ export class Signer {
    */
   sign(data: any, privateKey: string, options?: SignOptions): string {
     const opts = { ...this.defaultOptions, ...options };
-    return signFunction(data, privateKey, opts);
+    return signFunction(data, privateKey);
   }
 
   /**
@@ -33,7 +33,7 @@ export class Signer {
     options?: VerifyOptions
   ): boolean {
     const opts = { ...this.defaultOptions, ...options };
-    return verifyFunction(data, signature, publicKey, opts);
+    return verifyFunction(data, signature, publicKey);
   }
 
   /**
