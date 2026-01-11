@@ -10,6 +10,11 @@ import {
   createHash,
   hkdf,
   hkdfSync,
+  diffieHellman,
+  createPublicKey,
+  createPrivateKey,
+  generateKeyPairSync,
+  KeyObject,
 } from "crypto";
 import { pipeline } from "stream/promises";
 import { tmpdir } from "os";
@@ -374,7 +379,6 @@ function encryptMessage(
         options.recipientPublicKey
       );
 
-      // FIX: Use the correct aesKey from ephemeralData
       const cipherECDH = createCipheriv(
         "aes-256-gcm",
         ephemeralData.aesKey,
@@ -394,14 +398,11 @@ function encryptMessage(
       const ephemeralKeyLenBuf = Buffer.alloc(2);
       ephemeralKeyLenBuf.writeUInt16BE(ephemeralKeyBuffer.length, 0);
 
-      // FIX: saltBuffer is already a Buffer, don't convert again
-      const saltBuffer = ephemeralData.salt;
-
       return Buffer.concat([
         typeFlag,
         ephemeralKeyLenBuf,
         ephemeralKeyBuffer,
-        saltBuffer,
+        ephemeralData.salt,
         iv,
         tagECDH,
         encryptedECDH,
@@ -417,46 +418,69 @@ function encryptMessage(
  * FIX: Return proper types and convert ArrayBuffer to Buffer
  */
 function deriveAESKeyForEncryption(recipientPublicKeyStr: string): {
-  aesKey: Buffer; // FIX: renamed from aesKeySecureChannel
+  aesKey: Buffer;
   ephemeralPublicKey: string;
-  salt: Buffer; // FIX: renamed from saltSecureChannel and changed type to Buffer
+  ephemeralPrivateKey: KeyObject;
+  salt: Buffer;
 } {
-  const ephemeral = createECDH("prime256v1");
-  ephemeral.generateKeys();
+  // Genera chiave effimera X25519
+  const { publicKey, privateKey } = generateKeyPairSync("x25519");
 
-  const recipientPublicKey = Buffer.from(recipientPublicKeyStr, "base64");
+  // Chiave pubblica destinatario
+  const recipientPublicKey = createPublicKey({
+    key: Buffer.from(recipientPublicKeyStr, "base64"),
+    format: "der",
+    type: "spki",
+  });
+
   const salt = randomBytes(16);
 
-  const sharedSecret = ephemeral.computeSecret(recipientPublicKey);
+  // Shared secret
+  const sharedSecret = diffieHellman({
+    privateKey,
+    publicKey: recipientPublicKey,
+  });
 
-  // FIX: Convert ArrayBuffer to Buffer
+  // Deriva AES key con HKDF
   const aesKey = Buffer.from(
     hkdfSync("sha256", sharedSecret, salt, "secure-channel as key", 32)
   );
 
   return {
     aesKey,
-    ephemeralPublicKey: ephemeral.getPublicKey("base64"),
-    salt, // Already a Buffer, no conversion needed
+    ephemeralPublicKey: publicKey
+      .export({ type: "spki", format: "der" })
+      .toString("base64"),
+    ephemeralPrivateKey: privateKey,
+    salt,
   };
 }
 
 /**
- * Recipient side: derives AES key from ephemeral public key
+ * Lato destinatario: derive AES key da chiave effimera del mittente
  */
 function deriveAESKeyForDecryption(
   recipientPrivateKeyStr: string,
   ephemeralPublicKeyStr: string,
   salt: Buffer
 ): Buffer {
-  const recipient = createECDH("prime256v1");
-  const recipientPrivateKey = Buffer.from(recipientPrivateKeyStr, "base64");
-  recipient.setPrivateKey(recipientPrivateKey);
+  const recipientPrivateKey = createPrivateKey({
+    key: Buffer.from(recipientPrivateKeyStr, "base64"),
+    format: "der",
+    type: "pkcs8",
+  });
 
-  const ephemeralPublicKey = Buffer.from(ephemeralPublicKeyStr, "base64");
-  const sharedSecret = recipient.computeSecret(ephemeralPublicKey);
+  const ephemeralPublicKey = createPublicKey({
+    key: Buffer.from(ephemeralPublicKeyStr, "base64"),
+    format: "der",
+    type: "spki",
+  });
 
-  // FIX: Convert ArrayBuffer to Buffer
+  const sharedSecret = diffieHellman({
+    privateKey: recipientPrivateKey,
+    publicKey: ephemeralPublicKey,
+  });
+
   const aesKey = Buffer.from(
     hkdfSync("sha256", sharedSecret, salt, "secure-channel as key", 32)
   );

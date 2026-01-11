@@ -1,79 +1,59 @@
 import { decrypt } from "./crypto/decrypt";
+import { doubleRatchetTest } from "./crypto/doubleRatchetTest";
 import { encrypt } from "./crypto/encrypt";
 import { Key } from "./keys";
 import { sign, verify } from "./signature";
 
-/*
- Key {
-  publicKey: 'BHaHij3c2Yuyk4Ko3h6FhDWrrI7OMg1LWV+xxUYJnXLllEoMNyXly77azbKP189Y5RJJw8QDQZZHYKtYk6q81ws=',
-  privateKey: 'L+m9FVhfWryoPVqzDS4eRpJJKykJz/55t0FSoCt2cos='
-}*/
 async function test() {
-  const newKeys = await Key.generate("sign");
-  console.log(newKeys);
+  // === SETUP: Alice e Bob generano le loro chiavi ===
+  const aliceKeys = await Key.generate("channel");
+  const bobKeys = await Key.generate("channel");
 
-  const singedData = sign("john", newKeys.privateKey as string);
-  const verifiedData = verify("john", singedData, newKeys.publicKey as string);
-  console.log(singedData);
-  console.log(verifiedData);
-  // ✅ Encrypt with consistent parameter order
-  // const encrypted1 = await encrypt(
-  //   {
-  //     type: "secure-channel",
-  //     recipientPublicKey:
-  //       "BHaHij3c2Yuyk4Ko3h6FhDWrrI7OMg1LWV+xxUYJnXLllEoMNyXly77azbKP189Y5RJJw8QDQZZHYKtYk6q81ws=",
-  //   },
-  //   "Hello World"
-  // );
+  console.log("👩 Alice (recipient):", {
+    public: aliceKeys.publicKey,
+    private: aliceKeys.privateKey?.substring(0, 20) + "...",
+  });
 
-  // // ✅ Decrypt
-  // const decrypted1 = await decrypt(
-  //   {
-  //     type: "secure-channel",
-  //     recipientPrivateKey:
-  //       "L+m9FVhfWryoPVqzDS4eRpJJKykJz/55t0FSoCt2cos=" as string,
-  //   },
-  //   encrypted1.data!
-  // );
-  // console.log(decrypted1.data); // "Hello World"
+  console.log("👨 Bob (sender) - not needed for this mode");
 
-  // // ✅ Encrypt an object
-  // const encrypted2 = await encrypt(
-  //   {
-  //     type: "secure-channel",
-  //     recipientPublicKey:
-  //       "BHaHij3c2Yuyk4Ko3h6FhDWrrI7OMg1LWV+xxUYJnXLllEoMNyXly77azbKP189Y5RJJw8QDQZZHYKtYk6q81ws=",
-  //   },
-  //   { user: "Alice", age: 30 }
-  // );
+  // === Bob invia un messaggio ad Alice ===
+  console.log("\n📤 Bob encrypts message for Alice...");
+  const encrypted = await encrypt(
+    {
+      type: "secure-channel",
+      recipientPublicKey: aliceKeys.publicKey as string, // Bob usa la public key di Alice
+    },
+    "Ciao Alice, questo è un messaggio segreto!"
+  );
 
-  // // ✅ Decrypt
-  // const decrypted2 = await decrypt(
-  //   {
-  //     type: "secure-channel",
-  //     recipientPrivateKey:
-  //       "L+m9FVhfWryoPVqzDS4eRpJJKykJz/55t0FSoCt2cos=" as string,
-  //   },
-  //   encrypted2.data!
-  // );
-  // console.log(decrypted2.data); // { user: "Alice", age: 30 }
+  console.log("✅ Encrypted:", encrypted.data?.substring(0, 50) + "...");
 
-  // // ✅ File encryption/decryption
-  // await encrypt(
-  //   { type: "symmetric-password", password: "secret" },
-  //   Buffer.from(""), // dummy buffer for file mode
-  //   "./input.txt",
-  //   "./encrypted.bin"
-  // );
+  // === Alice riceve e decripta il messaggio ===
+  console.log("\n📥 Alice decrypts message...");
+  const decrypted = await decrypt(
+    {
+      type: "secure-channel",
+      recipientPrivateKey: aliceKeys.privateKey as string, // Alice usa la sua private key
+    },
+    encrypted.data!
+  );
 
-  // await decrypt(
-  //   { type: "symmetric-password", password: "secret" },
-  //   "", // dummy string for file mode
-  //   "./encrypted.bin",
-  //   "./decrypted.txt"
-  // );
+  console.log("✅ Decrypted:", decrypted);
+
+  // === Test: Bob NON può decriptare (non ha la private key di Alice) ===
+  console.log("\n❌ Bob tries to decrypt (should fail)...");
+  try {
+    await decrypt(
+      {
+        type: "secure-channel",
+        recipientPrivateKey: bobKeys.privateKey as string, // Chiave sbagliata!
+      },
+      encrypted.data!
+    );
+  } catch (error) {
+    console.log("❌ Failed as expected:", (error as Error).message);
+  }
 }
-
 test();
 //compila
 //npx tsc

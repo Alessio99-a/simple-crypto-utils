@@ -11,6 +11,9 @@ import {
   scryptSync,
   createECDH,
   hkdfSync,
+  createPrivateKey,
+  createPublicKey,
+  diffieHellman,
 } from "crypto";
 import { pipeline } from "stream/promises";
 
@@ -351,14 +354,23 @@ function deriveAESKeyForDecryption(
   ephemeralPublicKeyStr: string,
   salt: Buffer
 ): Buffer {
-  const recipient = createECDH("prime256v1");
-  const recipientPrivateKey = Buffer.from(recipientPrivateKeyStr, "base64");
-  recipient.setPrivateKey(recipientPrivateKey);
+  const recipientPrivateKey = createPrivateKey({
+    key: Buffer.from(recipientPrivateKeyStr, "base64"),
+    format: "der",
+    type: "pkcs8",
+  });
 
-  const ephemeralPublicKey = Buffer.from(ephemeralPublicKeyStr, "base64");
-  const sharedSecret = recipient.computeSecret(ephemeralPublicKey);
+  const ephemeralPublicKey = createPublicKey({
+    key: Buffer.from(ephemeralPublicKeyStr, "base64"),
+    format: "der",
+    type: "spki",
+  });
 
-  // ✅ FIXED: Convert ArrayBuffer to Buffer (same as encryption)
+  const sharedSecret = diffieHellman({
+    privateKey: recipientPrivateKey,
+    publicKey: ephemeralPublicKey,
+  });
+
   const aesKey = Buffer.from(
     hkdfSync("sha256", sharedSecret, salt, "secure-channel as key", 32)
   );
