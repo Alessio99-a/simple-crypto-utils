@@ -1,17 +1,32 @@
-import { generateECDHKeyPair } from "./ecdh";
 import { generateRSAKeyPair } from "./rsa";
-import { generateECDSAKeyPair } from "./ecdsa";
-export type keyType = "seal" | "sign" | "channel";
+import { generateEd25519KeyPair } from "./ed25519";
+import { generateX25519KeyPair } from "./x25519";
+import { generateAuthenticatedKeySet } from "./authenticated";
+export type keyType =
+  | "seal"
+  | "sign"
+  | "secure-channel"
+  | "authenticated-channel";
 
 export class Key {
   publicKey?: string;
   privateKey?: string;
+  signingPublicKey?: string;
+  signingPrivateKey?: string;
 
   static async generate(key: keyType): Promise<Key> {
     const k = new Key(); // create instance inside
     switch (key) {
-      case "channel": {
-        const { publicKey, privateKey } = generateECDHKeyPair();
+      case "authenticated-channel": {
+        const key = generateAuthenticatedKeySet();
+        k.publicKey = key.encryption.publicKey;
+        k.privateKey = key.encryption.privateKey;
+        k.signingPublicKey = key.signing.publicKey;
+        k.signingPrivateKey = key.signing.privateKey;
+        break;
+      }
+      case "secure-channel": {
+        const { publicKey, privateKey } = generateX25519KeyPair();
         k.publicKey = publicKey;
         k.privateKey = privateKey;
         break;
@@ -24,7 +39,7 @@ export class Key {
       }
 
       case "sign": {
-        const { publicKey, privateKey } = generateECDSAKeyPair();
+        const { publicKey, privateKey } = generateEd25519KeyPair();
         k.publicKey = publicKey;
         k.privateKey = privateKey;
         break;
