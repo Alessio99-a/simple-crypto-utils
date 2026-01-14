@@ -488,9 +488,17 @@ async function decryptFileStreaming(
       }
 
       const encryptedAESKey = Buffer.from(header.encryptedKey, "base64");
+
+      // Convert base64 DER to KeyObject
+      const recipientPrivKey = createPrivateKey({
+        key: Buffer.from(options.recipientPrivateKey, "base64"),
+        format: "der",
+        type: "pkcs8",
+      });
+
       const aesKey = privateDecrypt(
         {
-          key: options.recipientPrivateKey,
+          key: recipientPrivKey, // Use KeyObject instead of string
           padding: constants.RSA_PKCS1_OAEP_PADDING,
           oaepHash: "sha256",
         },
@@ -670,9 +678,16 @@ function decryptMessage(
 
       const encryptedRSA = buffer.subarray(offset);
 
+      // Convert base64 DER to KeyObject
+      const recipientPrivKey = createPrivateKey({
+        key: Buffer.from(options.recipientPrivateKey, "base64"),
+        format: "der",
+        type: "pkcs8",
+      });
+
       const aesKey = privateDecrypt(
         {
-          key: options.recipientPrivateKey,
+          key: recipientPrivKey, // Use KeyObject instead of string
           padding: constants.RSA_PKCS1_OAEP_PADDING,
           oaepHash: "sha256",
         },

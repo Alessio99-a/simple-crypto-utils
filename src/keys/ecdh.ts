@@ -1,7 +1,27 @@
 import { generateKeyPairSync } from "crypto";
 
 /**
- * Genera una coppia di chiavi X25519
+ * Generates an X25519 key pair for Elliptic Curve Diffie-Hellman (ECDH).
+ *
+ * The keys are exported in DER format and encoded as Base64 strings:
+ * - Public key: SPKI (SubjectPublicKeyInfo)
+ * - Private key: PKCS#8
+ *
+ * This key pair is suitable for secure key agreement protocols.
+ *
+ * @returns An object containing:
+ *  - `publicKey`: Base64-encoded X25519 public key (DER, SPKI)
+ *  - `privateKey`: Base64-encoded X25519 private key (DER, PKCS#8)
+ *
+ * @example
+ * ```ts
+ * import { generateECDHKeyPair } from "./ecdh";
+ *
+ * const { publicKey, privateKey } = generateECDHKeyPair();
+ *
+ * console.log(publicKey);  // Send to the peer
+ * console.log(privateKey); // Keep secret
+ * ```
  */
 export function generateECDHKeyPair(): {
   publicKey: string;
@@ -18,17 +38,3 @@ export function generateECDHKeyPair(): {
       .toString("base64"),
   };
 }
-
-//OLD
-// export function generateECDHKeyPair(): {
-//   publicKey: string;
-//   privateKey: string;
-// } {
-//   const ecdh = createECDH("prime256v1");
-//   ecdh.generateKeys();
-
-//   const publicKey = ecdh.getPublicKey("base64");
-//   const privateKey = ecdh.getPrivateKey("base64");
-
-//   return { publicKey, privateKey };
-// }

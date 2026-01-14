@@ -6,19 +6,22 @@
 
 import { encrypt } from "./crypto/encrypt";
 import { decrypt } from "./crypto/decrypt";
-import {
-  generateRSAKeyPair,
-  generateX25519KeyPair,
-  generateAuthenticatedKeySet,
-} from "./utlis/utily";
 import { writeFileSync, readFileSync } from "fs";
 import { Key } from "./keys";
+import path from "path";
+import { keys } from ".";
 
 // ============================================
 // EXAMPLE 1: Personal File Backup
 // ============================================
 
 async function example1_PersonalFileBackup() {
+  // Use the project root directory to avoid import.meta (which requires specific TS module settings)
+  const projectRoot = process.cwd();
+  const inputPath = path.join(projectRoot, "test.txt");
+  const outputPath = path.join(projectRoot, "test.enc");
+  const inputEncrypted = path.join(projectRoot, "test.enc");
+  const outputDecrypted = path.join(projectRoot, "decrypted.txt");
   console.log("\n📦 EXAMPLE 1: Personal File Backup\n");
 
   const password = "MySecureBackup!2024";
@@ -27,8 +30,8 @@ async function example1_PersonalFileBackup() {
   await encrypt(
     { type: "symmetric-password", password },
     undefined,
-    "./documents/taxes-2024.pdf",
-    "./backups/taxes-2024.pdf.enc"
+    inputPath,
+    outputPath
   );
 
   console.log("✅ Backup encrypted");
@@ -37,8 +40,8 @@ async function example1_PersonalFileBackup() {
   await decrypt(
     { type: "symmetric-password", password },
     undefined,
-    "./backups/taxes-2024.pdf.enc",
-    "./restored/taxes-2024.pdf"
+    inputEncrypted,
+    outputDecrypted
   );
 
   console.log("✅ Backup restored");
@@ -52,15 +55,15 @@ async function example2_ConfidentialEmail() {
   console.log("\n📧 EXAMPLE 2: Confidential Email\n");
 
   // Recipient's public key (they shared it with you beforehand)
-  const recipientPublicKey = "MIICIjANBgkqhki..."; // RSA public key
-
+  const keys = await Key.generate("seal"); // RSA public key
+  const recipientPublicKey = keys.publicKey as string;
   const emailContent = {
     to: "alice@example.com",
     subject: "Q4 Financial Report",
     body: "Please find attached the confidential Q4 report...",
     attachments: ["q4-report.pdf"],
   };
-
+  console.log(recipientPublicKey);
   // Encrypt email content
   const encrypted = await encrypt(
     { type: "sealEnvelope", recipientPublicKey },
@@ -85,7 +88,7 @@ async function example2_ConfidentialEmail() {
 // ============================================
 
 async function example3_SecureMessaging() {
-  console.log("\n💬 EXAMPLE 3: Secure Messaging (like Signal)\n");
+  console.log("\n💬 EXAMPLE 3: Secure Messaging\n");
 
   // Alice and Bob generate their keys once
   const alice = await Key.generate("secure-channel");
@@ -97,7 +100,7 @@ async function example3_SecureMessaging() {
   const aliceMessage = await encrypt(
     {
       type: "secure-channel",
-      recipientPublicKey: bob.publicKey,
+      recipientPublicKey: bob.publicKey as string,
       includeTimestamp: true,
     },
     "Hey Bob, let's meet at 3pm"
@@ -109,7 +112,7 @@ async function example3_SecureMessaging() {
   const bobReceives = await decrypt(
     {
       type: "secure-channel",
-      recipientPrivateKey: bob.privateKey,
+      recipientPrivateKey: bob.privateKey as string,
       validateTimestamp: true,
     },
     aliceMessage.data!
@@ -126,7 +129,7 @@ async function example3_SecureMessaging() {
   const bobMessage = await encrypt(
     {
       type: "secure-channel",
-      recipientPublicKey: alice.publicKey,
+      recipientPublicKey: alice.publicKey as string,
     },
     "Sounds good! See you then"
   );
@@ -134,7 +137,7 @@ async function example3_SecureMessaging() {
   const aliceReceives = await decrypt(
     {
       type: "secure-channel",
-      recipientPrivateKey: alice.privateKey,
+      recipientPrivateKey: alice.privateKey as string,
     },
     bobMessage.data!
   );
@@ -168,8 +171,8 @@ async function example4_SignedContract() {
   const signedContract = await encrypt(
     {
       type: "authenticated-channel",
-      recipientPublicKey: client.encryption.publicKey,
-      senderPrivateKey: company.signing.privateKey,
+      recipientPublicKey: client.publicKey as string, // Client's X25519 encryption key
+      senderPrivateKey: company.signingPrivateKey as string, // Company's Ed25519 signing key (CHANGED)
       includeTimestamp: true,
     },
     contract
@@ -181,8 +184,8 @@ async function example4_SignedContract() {
   const verified = await decrypt(
     {
       type: "authenticated-channel",
-      recipientPrivateKey: client.encryption.privateKey,
-      senderPublicKey: company.signing.publicKey,
+      recipientPrivateKey: client.privateKey as string, // Client's X25519 decryption key (needs to be encryption privateKey)
+      senderPublicKey: company.signingPublicKey as string, // Company's Ed25519 verification key (CHANGED)
       validateTimestamp: true,
     },
     signedContract.data!
@@ -222,8 +225,8 @@ async function example5_MedicalRecords() {
   const encrypted = await encrypt(
     {
       type: "authenticated-channel",
-      recipientPublicKey: patient.encryption.publicKey,
-      senderPrivateKey: doctor.signing.privateKey,
+      recipientPublicKey: patient.publicKey as string,
+      senderPrivateKey: doctor.signingPrivateKey as string,
       strictMode: true, // Maximum security for medical data
       includeTimestamp: true,
     },
@@ -236,8 +239,8 @@ async function example5_MedicalRecords() {
   const decrypted = await decrypt(
     {
       type: "authenticated-channel",
-      recipientPrivateKey: patient.encryption.privateKey,
-      senderPublicKey: doctor.signing.publicKey,
+      recipientPrivateKey: patient.privateKey as string,
+      senderPublicKey: doctor.signingPublicKey as string,
       validateTimestamp: true,
       strictMode: true,
     },
@@ -326,7 +329,7 @@ async function example7_ReplayAttackDemo() {
   const message = await encrypt(
     {
       type: "secure-channel",
-      recipientPublicKey: bob.publicKey,
+      recipientPublicKey: bob.publicKey as string,
       includeTimestamp: true,
     },
     "Transfer $10,000 to account #123"
@@ -338,7 +341,7 @@ async function example7_ReplayAttackDemo() {
   const received = await decrypt(
     {
       type: "secure-channel",
-      recipientPrivateKey: bob.privateKey,
+      recipientPrivateKey: bob.privateKey as string,
       validateTimestamp: true,
     },
     message.data!
@@ -370,9 +373,9 @@ async function example8_MultiRecipient() {
 
   const sender = await Key.generate("authenticated-channel");
   const recipients = [
-    { name: "Alice", keys: generateAuthenticatedKeySet() },
-    { name: "Bob", keys: generateAuthenticatedKeySet() },
-    { name: "Carol", keys: generateAuthenticatedKeySet() },
+    { name: "Alice", keys: await Key.generate("authenticated-channel") },
+    { name: "Bob", keys: await Key.generate("authenticated-channel") },
+    { name: "Carol", keys: await Key.generate("authenticated-channel") },
   ];
 
   const announcement = {
@@ -390,8 +393,8 @@ async function example8_MultiRecipient() {
       encrypted: await encrypt(
         {
           type: "authenticated-channel",
-          recipientPublicKey: recipient.keys.encryption.publicKey,
-          senderPrivateKey: sender.signing.privateKey,
+          recipientPublicKey: recipient.keys.publicKey as string, // X25519 encryption key
+          senderPrivateKey: sender.signingPrivateKey as string, // Ed25519 signing key (CHANGED)
         },
         announcement
       ),
@@ -407,8 +410,8 @@ async function example8_MultiRecipient() {
     const decrypted = await decrypt(
       {
         type: "authenticated-channel",
-        recipientPrivateKey: recipient.keys.encryption.privateKey,
-        senderPublicKey: sender.signing.publicKey,
+        recipientPrivateKey: recipient.keys.privateKey as string, // X25519 decryption key
+        senderPublicKey: sender.signingPublicKey as string, // Ed25519 verification key (CHANGED)
       },
       msg!.encrypted.data!
     );
@@ -424,8 +427,8 @@ async function example8_MultiRecipient() {
 
 async function runAllExamples() {
   try {
-    // await example1_PersonalFileBackup();
-    // await example2_ConfidentialEmail();
+    await example1_PersonalFileBackup();
+    await example2_ConfidentialEmail();
     await example3_SecureMessaging();
     await example4_SignedContract();
     await example5_MedicalRecords();

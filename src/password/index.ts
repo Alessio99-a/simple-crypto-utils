@@ -1,3 +1,3 @@
-export { generate } from "./generate";
-export { hash } from "./hash";
-export { validate } from "./verify";
+export { generatePassword } from "./generate";
+export { hashPassword } from "./hash";
+export { verifyPassword } from "./verify";

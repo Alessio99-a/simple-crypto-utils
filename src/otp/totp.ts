@@ -1,5 +1,11 @@
 import { createHmac } from "crypto";
 
+/**
+ * Converts a Base32-encoded string into a Buffer.
+ *
+ * @param base32 - The Base32 string to convert.
+ * @returns A Buffer containing the decoded bytes.
+ */
 function base32ToBuffer(base32: string): Buffer {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   let bits = "";
@@ -19,6 +25,28 @@ function base32ToBuffer(base32: string): Buffer {
   return Buffer.from(bytes);
 }
 
+/**
+ * Generates a Time-based One-Time Password (TOTP) according to RFC 6238.
+ *
+ * @param secret - The shared secret in Base32 encoding.
+ * @param digits - Number of digits in the OTP (default: 6).
+ * @param period - Time step in seconds (default: 30).
+ * @param timestamp - Unix timestamp in milliseconds (default: current time).
+ * @returns A numeric OTP as a string, zero-padded to the specified length.
+ *
+ * @example
+ * ```ts
+ * import { generateTOTP } from "./totp";
+ *
+ * const secret = "JBSWY3DPEHPK3PXP"; // Base32 secret
+ * const otp = generateTOTP(secret);
+ * console.log(otp); // e.g., "492039"
+ *
+ * // Generate a 8-digit OTP with a 60-second period
+ * const otp8 = generateTOTP(secret, 8, 60);
+ * console.log(otp8);
+ * ```
+ */
 export function generateTOTP(
   secret: string,
   digits = 6,

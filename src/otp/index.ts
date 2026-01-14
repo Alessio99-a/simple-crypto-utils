@@ -1,2 +1,2 @@
-export { generateOtp } from "./generate";
-export { hashOtp } from "./hash";
+export { generateTOTP } from "./totp";
+export { generateOTP } from "./otp";

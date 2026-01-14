@@ -1,6 +1,33 @@
 import { generateKeyPairSync } from "crypto";
 
-export function generateEd25519KeyPair() {
+/**
+ * Generates an Ed25519 key pair for digital signatures.
+ *
+ * The keys are generated using the Ed25519 algorithm and exported as:
+ * - Public key: SPKI (DER), Base64-encoded
+ * - Private key: PKCS#8 (DER), Base64-encoded
+ *
+ * These keys are suitable for signing and verifying messages
+ * in authenticated and secure communication protocols.
+ *
+ * @returns An object containing:
+ *  - `publicKey`: Base64-encoded Ed25519 public key (DER, SPKI)
+ *  - `privateKey`: Base64-encoded Ed25519 private key (DER, PKCS#8)
+ *
+ * @example
+ * ```ts
+ * import { generateEd25519KeyPair } from "./ed25519";
+ *
+ * const { publicKey, privateKey } = generateEd25519KeyPair();
+ *
+ * console.log(publicKey);  // Share publicly
+ * console.log(privateKey); // Keep secret
+ * ```
+ */
+export function generateEd25519KeyPair(): {
+  publicKey: string;
+  privateKey: string;
+} {
   const { publicKey, privateKey } = generateKeyPairSync("ed25519", {
     publicKeyEncoding: {
       type: "spki",
@@ -17,20 +44,3 @@ export function generateEd25519KeyPair() {
     privateKey: privateKey.toString("base64"),
   };
 }
-
-//OLD
-// export function generateECDSAKeyPair() {
-//   const { publicKey, privateKey } = generateKeyPairSync("ec", {
-//     namedCurve: "prime256v1", // P-256
-//     publicKeyEncoding: {
-//       type: "spki",
-//       format: "pem",
-//     },
-//     privateKeyEncoding: {
-//       type: "pkcs8",
-//       format: "pem",
-//     },
-//   });
-
-//   return { publicKey, privateKey };
-// }

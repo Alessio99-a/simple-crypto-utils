@@ -510,9 +510,16 @@ async function encryptFileStreaming(
         await pipeline(inputStream, cipherSeal, tempStream);
         const authTagSeal = cipherSeal.getAuthTag();
 
+        // Convert base64 DER to KeyObject
+        const recipientPubKey = createPublicKey({
+          key: Buffer.from(options.recipientPublicKey, "base64"),
+          format: "der",
+          type: "spki",
+        });
+
         const encryptedAESKey = publicEncrypt(
           {
-            key: options.recipientPublicKey,
+            key: recipientPubKey, // Use KeyObject instead of string
             padding: constants.RSA_PKCS1_OAEP_PADDING,
             oaepHash: "sha256",
           },
@@ -679,9 +686,16 @@ function encryptMessage(
       ]);
       const tagSeal = cipherSeal.getAuthTag();
 
+      // Convert base64 DER to KeyObject
+      const recipientPubKey = createPublicKey({
+        key: Buffer.from(options.recipientPublicKey, "base64"),
+        format: "der",
+        type: "spki",
+      });
+
       const encryptedKey = publicEncrypt(
         {
-          key: options.recipientPublicKey,
+          key: recipientPubKey, // Use KeyObject instead of string
           padding: constants.RSA_PKCS1_OAEP_PADDING,
           oaepHash: "sha256",
         },

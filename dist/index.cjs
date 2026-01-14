@@ -1,28 +1,60 @@
+"use strict";
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/index.ts
+var index_exports = {};
+__export(index_exports, {
+  LIBRARY_VERSION: () => LIBRARY_VERSION,
+  MAX_MESSAGE_AGE: () => MAX_MESSAGE_AGE,
+  MESSAGE_MAX_AGE_MS: () => MESSAGE_MAX_AGE_MS,
+  MINIMUM_PASSWORD_LENGTH: () => MINIMUM_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH: () => MIN_PASSWORD_LENGTH,
+  VERSION: () => VERSION,
+  decrypt: () => decrypt,
+  decryptFile: () => decryptFile,
+  decryptMessage: () => decryptMessage,
+  deriveAESKeyForDecryption: () => deriveAESKeyForDecryption,
+  deriveAESKeyForEncryption: () => deriveAESKeyForEncryption,
+  encrypt: () => encrypt,
+  encryptFileStreaming: () => encryptFileStreaming,
+  encryptMessage: () => encryptMessage,
+  hash: () => hash_exports,
+  keys: () => keys_exports,
+  otp: () => otp_exports,
+  password: () => password_exports,
+  signature: () => signature_exports,
+  uuid: () => uuid_exports,
+  validatePassword: () => validatePassword,
+  validatePrivateKey: () => validatePrivateKey,
+  validatePublicKey: () => validatePublicKey,
+  validateTimestamp: () => validateTimestamp,
+  validateVersion: () => validateVersion
+});
+module.exports = __toCommonJS(index_exports);
 
 // src/crypto/encrypt.ts
-import { createReadStream, createWriteStream } from "fs";
-import { unlink } from "fs/promises";
-import {
-  createCipheriv,
-  publicEncrypt,
-  randomBytes,
-  constants,
-  scryptSync,
-  hkdfSync,
-  diffieHellman,
-  createPublicKey,
-  createPrivateKey,
-  generateKeyPairSync,
-  sign
-} from "crypto";
-import { pipeline } from "stream/promises";
-import { tmpdir } from "os";
-import { join } from "path";
+var import_fs = require("fs");
+var import_promises = require("fs/promises");
+var import_crypto = require("crypto");
+var import_promises2 = require("stream/promises");
+var import_os = require("os");
+var import_path = require("path");
 var VERSION = 1;
 var MIN_PASSWORD_LENGTH = 12;
 var MESSAGE_MAX_AGE_MS = 5 * 60 * 1e3;
@@ -53,7 +85,7 @@ function validatePassword(password, strictMode = false) {
 function validatePublicKey(keyStr, expectedType) {
   try {
     const keyBuffer = Buffer.from(keyStr, "base64");
-    const key = createPublicKey({
+    const key = (0, import_crypto.createPublicKey)({
       key: keyBuffer,
       format: "der",
       type: "spki"
@@ -70,7 +102,7 @@ function validatePublicKey(keyStr, expectedType) {
 function validatePrivateKey(keyStr, expectedType) {
   try {
     const keyBuffer = Buffer.from(keyStr, "base64");
-    const key = createPrivateKey({
+    const key = (0, import_crypto.createPrivateKey)({
       key: keyBuffer,
       format: "der",
       type: "pkcs8"
@@ -86,7 +118,7 @@ function validatePrivateKey(keyStr, expectedType) {
 }
 async function secureDelete(filePath) {
   try {
-    await unlink(filePath);
+    await (0, import_promises.unlink)(filePath);
   } catch (err) {
     console.error(`\u26A0\uFE0F Failed to delete temp file ${filePath}:`, err.message);
   }
@@ -125,23 +157,23 @@ async function encryptFile(options, inputPath, outputPath) {
   await encryptFileStreaming(options, inputPath, outputPath);
 }
 async function encryptFileStreaming(options, inputPath, outputPath) {
-  const aesKey = randomBytes(32);
-  const iv = randomBytes(12);
-  const tempPath = join(
-    tmpdir(),
-    `temp-encrypt-${Date.now()}-${randomBytes(4).toString("hex")}.tmp`
+  const aesKey = (0, import_crypto.randomBytes)(32);
+  const iv = (0, import_crypto.randomBytes)(12);
+  const tempPath = (0, import_path.join)(
+    (0, import_os.tmpdir)(),
+    `temp-encrypt-${Date.now()}-${(0, import_crypto.randomBytes)(4).toString("hex")}.tmp`
   );
   try {
-    const tempStream = createWriteStream(tempPath);
-    const inputStream = createReadStream(inputPath);
+    const tempStream = (0, import_fs.createWriteStream)(tempPath);
+    const inputStream = (0, import_fs.createReadStream)(inputPath);
     let header;
     switch (options.type) {
       case "symmetric-password":
         validatePassword(options.password, options.strictMode);
-        const salt = randomBytes(16);
-        const key = scryptSync(options.password, salt, 32);
-        const cipherSymmetric = createCipheriv("aes-256-gcm", key, iv);
-        await pipeline(inputStream, cipherSymmetric, tempStream);
+        const salt = (0, import_crypto.randomBytes)(16);
+        const key = (0, import_crypto.scryptSync)(options.password, salt, 32);
+        const cipherSymmetric = (0, import_crypto.createCipheriv)("aes-256-gcm", key, iv);
+        await (0, import_promises2.pipeline)(inputStream, cipherSymmetric, tempStream);
         const authTagSymmetric = cipherSymmetric.getAuthTag();
         header = {
           version: VERSION,
@@ -152,19 +184,19 @@ async function encryptFileStreaming(options, inputPath, outputPath) {
         break;
       case "sealEnvelope":
         validatePublicKey(options.recipientPublicKey, "rsa");
-        const cipherSeal = createCipheriv("aes-256-gcm", aesKey, iv);
-        await pipeline(inputStream, cipherSeal, tempStream);
+        const cipherSeal = (0, import_crypto.createCipheriv)("aes-256-gcm", aesKey, iv);
+        await (0, import_promises2.pipeline)(inputStream, cipherSeal, tempStream);
         const authTagSeal = cipherSeal.getAuthTag();
-        const recipientPubKey = createPublicKey({
+        const recipientPubKey = (0, import_crypto.createPublicKey)({
           key: Buffer.from(options.recipientPublicKey, "base64"),
           format: "der",
           type: "spki"
         });
-        const encryptedAESKey = publicEncrypt(
+        const encryptedAESKey = (0, import_crypto.publicEncrypt)(
           {
             key: recipientPubKey,
             // Use KeyObject instead of string
-            padding: constants.RSA_PKCS1_OAEP_PADDING,
+            padding: import_crypto.constants.RSA_PKCS1_OAEP_PADDING,
             oaepHash: "sha256"
           },
           aesKey
@@ -181,12 +213,12 @@ async function encryptFileStreaming(options, inputPath, outputPath) {
         const ephemeralData = deriveAESKeyForEncryption(
           options.recipientPublicKey
         );
-        const cipherECDH = createCipheriv(
+        const cipherECDH = (0, import_crypto.createCipheriv)(
           "aes-256-gcm",
           ephemeralData.aesKey,
           iv
         );
-        await pipeline(inputStream, cipherECDH, tempStream);
+        await (0, import_promises2.pipeline)(inputStream, cipherECDH, tempStream);
         const authTagECDH = cipherECDH.getAuthTag();
         header = {
           version: VERSION,
@@ -205,14 +237,14 @@ async function encryptFileStreaming(options, inputPath, outputPath) {
         const ephemeralAuthData = deriveAESKeyForEncryption(
           options.recipientPublicKey
         );
-        const cipherAuth = createCipheriv(
+        const cipherAuth = (0, import_crypto.createCipheriv)(
           "aes-256-gcm",
           ephemeralAuthData.aesKey,
           iv
         );
-        await pipeline(inputStream, cipherAuth, tempStream);
+        await (0, import_promises2.pipeline)(inputStream, cipherAuth, tempStream);
         const authTagAuth = cipherAuth.getAuthTag();
-        const senderPrivKey = createPrivateKey({
+        const senderPrivKey = (0, import_crypto.createPrivateKey)({
           key: Buffer.from(options.senderPrivateKey, "base64"),
           format: "der",
           type: "pkcs8"
@@ -222,7 +254,7 @@ async function encryptFileStreaming(options, inputPath, outputPath) {
           iv,
           authTagAuth
         ]);
-        const signature = sign(null, dataToSign, senderPrivKey);
+        const signature = (0, import_crypto.sign)(null, dataToSign, senderPrivKey);
         header = {
           version: VERSION,
           ephemeralPublicKey: ephemeralAuthData.ephemeralPublicKey,
@@ -239,11 +271,11 @@ async function encryptFileStreaming(options, inputPath, outputPath) {
     const headerJson = Buffer.from(JSON.stringify(header), "utf8");
     const headerLengthBuf = Buffer.alloc(4);
     headerLengthBuf.writeUInt32BE(headerJson.length, 0);
-    const outputStream = createWriteStream(outputPath);
+    const outputStream = (0, import_fs.createWriteStream)(outputPath);
     outputStream.write(headerLengthBuf);
     outputStream.write(headerJson);
-    const tempReadStream = createReadStream(tempPath);
-    await pipeline(tempReadStream, outputStream);
+    const tempReadStream = (0, import_fs.createReadStream)(tempPath);
+    await (0, import_promises2.pipeline)(tempReadStream, outputStream);
     console.log("\u2705 File encrypted successfully");
   } finally {
     await secureDelete(tempPath);
@@ -254,14 +286,14 @@ function encryptMessage(options, data) {
   const stringData = isString ? data : JSON.stringify(data);
   const versionByte = Buffer.from([VERSION]);
   const typeFlag = Buffer.from([isString ? 0 : 1]);
-  const iv = randomBytes(12);
-  const aesKey = randomBytes(32);
+  const iv = (0, import_crypto.randomBytes)(12);
+  const aesKey = (0, import_crypto.randomBytes)(32);
   switch (options.type) {
     case "symmetric-password":
       validatePassword(options.password, options.strictMode);
-      const salt = randomBytes(16);
-      const key = scryptSync(options.password, salt, 32);
-      const cipher = createCipheriv("aes-256-gcm", key, iv);
+      const salt = (0, import_crypto.randomBytes)(16);
+      const key = (0, import_crypto.scryptSync)(options.password, salt, 32);
+      const cipher = (0, import_crypto.createCipheriv)("aes-256-gcm", key, iv);
       const encrypted = Buffer.concat([
         cipher.update(stringData, "utf8"),
         cipher.final()
@@ -277,22 +309,22 @@ function encryptMessage(options, data) {
       ]).toString("hex");
     case "sealEnvelope":
       validatePublicKey(options.recipientPublicKey, "rsa");
-      const cipherSeal = createCipheriv("aes-256-gcm", aesKey, iv);
+      const cipherSeal = (0, import_crypto.createCipheriv)("aes-256-gcm", aesKey, iv);
       const encryptedSeal = Buffer.concat([
         cipherSeal.update(stringData, "utf8"),
         cipherSeal.final()
       ]);
       const tagSeal = cipherSeal.getAuthTag();
-      const recipientPubKey = createPublicKey({
+      const recipientPubKey = (0, import_crypto.createPublicKey)({
         key: Buffer.from(options.recipientPublicKey, "base64"),
         format: "der",
         type: "spki"
       });
-      const encryptedKey = publicEncrypt(
+      const encryptedKey = (0, import_crypto.publicEncrypt)(
         {
           key: recipientPubKey,
           // Use KeyObject instead of string
-          padding: constants.RSA_PKCS1_OAEP_PADDING,
+          padding: import_crypto.constants.RSA_PKCS1_OAEP_PADDING,
           oaepHash: "sha256"
         },
         aesKey
@@ -323,7 +355,7 @@ function encryptMessage(options, data) {
         ]).toString("base64");
         hasTimestamp = true;
       }
-      const cipherECDH = createCipheriv(
+      const cipherECDH = (0, import_crypto.createCipheriv)(
         "aes-256-gcm",
         ephemeralData.aesKey,
         iv
@@ -367,7 +399,7 @@ function encryptMessage(options, data) {
         ]).toString("base64");
         hasTimestampAuth = true;
       }
-      const cipherAuth = createCipheriv(
+      const cipherAuth = (0, import_crypto.createCipheriv)(
         "aes-256-gcm",
         ephemeralAuthData.aesKey,
         iv
@@ -377,7 +409,7 @@ function encryptMessage(options, data) {
         cipherAuth.final()
       ]);
       const tagAuth = cipherAuth.getAuthTag();
-      const senderPrivKey = createPrivateKey({
+      const senderPrivKey = (0, import_crypto.createPrivateKey)({
         key: Buffer.from(options.senderPrivateKey, "base64"),
         format: "der",
         type: "pkcs8"
@@ -387,7 +419,7 @@ function encryptMessage(options, data) {
         "base64"
       );
       const dataToSign = Buffer.concat([ephemeralKeyBufferAuth, iv, tagAuth]);
-      const signature = sign(null, dataToSign, senderPrivKey);
+      const signature = (0, import_crypto.sign)(null, dataToSign, senderPrivKey);
       const ephemeralKeyLenBufAuth = Buffer.alloc(2);
       ephemeralKeyLenBufAuth.writeUInt16BE(ephemeralKeyBufferAuth.length, 0);
       const signatureLenBuf = Buffer.alloc(2);
@@ -409,19 +441,19 @@ function encryptMessage(options, data) {
   }
 }
 function deriveAESKeyForEncryption(recipientPublicKeyStr) {
-  const { publicKey, privateKey } = generateKeyPairSync("x25519");
-  const recipientPublicKey = createPublicKey({
+  const { publicKey, privateKey } = (0, import_crypto.generateKeyPairSync)("x25519");
+  const recipientPublicKey = (0, import_crypto.createPublicKey)({
     key: Buffer.from(recipientPublicKeyStr, "base64"),
     format: "der",
     type: "spki"
   });
-  const salt = randomBytes(16);
-  const sharedSecret = diffieHellman({
+  const salt = (0, import_crypto.randomBytes)(16);
+  const sharedSecret = (0, import_crypto.diffieHellman)({
     privateKey,
     publicKey: recipientPublicKey
   });
   const aesKey = Buffer.from(
-    hkdfSync("sha256", sharedSecret, salt, "secure-channel-aes-key", 32)
+    (0, import_crypto.hkdfSync)("sha256", sharedSecret, salt, "secure-channel-aes-key", 32)
   );
   return {
     aesKey,
@@ -440,7 +472,7 @@ __export(password_exports, {
 });
 
 // src/password/generate.ts
-import { randomBytes as randomBytes2 } from "crypto";
+var import_crypto2 = require("crypto");
 var charsetMap = {
   letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
   numbers: "0123456789",
@@ -469,7 +501,7 @@ function generatePassword(lengthOrOptions) {
   if (length < 1 || length > 1024) {
     throw new Error("Length must be between 1 and 1024");
   }
-  const bytes = randomBytes2(length);
+  const bytes = (0, import_crypto2.randomBytes)(length);
   const password = Array.from(
     bytes,
     (byte) => charset[byte % charset.length]
@@ -478,11 +510,11 @@ function generatePassword(lengthOrOptions) {
 }
 
 // src/password/hash.ts
-import { randomBytes as randomBytes3, scrypt as scryptCallback } from "crypto";
-import { promisify } from "util";
-var scryptAsync = promisify(scryptCallback);
+var import_crypto3 = require("crypto");
+var import_util = require("util");
+var scryptAsync = (0, import_util.promisify)(import_crypto3.scrypt);
 async function hashPassword(password) {
-  const salt = randomBytes3(16);
+  const salt = (0, import_crypto3.randomBytes)(16);
   const derivedKey = await scryptAsync(password, salt, 64);
   const saltBase64 = salt.toString("base64");
   const hashBase64 = derivedKey.toString("base64");
@@ -490,9 +522,9 @@ async function hashPassword(password) {
 }
 
 // src/password/verify.ts
-import { scrypt as scryptCallback2 } from "crypto";
-import { promisify as promisify2 } from "util";
-var scryptAsync2 = promisify2(scryptCallback2);
+var import_crypto4 = require("crypto");
+var import_util2 = require("util");
+var scryptAsync2 = (0, import_util2.promisify)(import_crypto4.scrypt);
 async function scryptTyped(password, salt, keylen) {
   const result = await scryptAsync2(password, salt, keylen);
   if (!result) throw new Error("Scrypt derivation failed");
@@ -521,9 +553,9 @@ __export(uuid_exports, {
 });
 
 // src/uuid/generate.ts
-import { randomUUID } from "crypto";
+var import_crypto5 = require("crypto");
 function generateUUID() {
-  return randomUUID();
+  return (0, import_crypto5.randomUUID)();
 }
 
 // src/signature/index.ts
@@ -538,7 +570,7 @@ __export(signature_exports, {
 });
 
 // src/signature/sign.ts
-import { createPrivateKey as createPrivateKey2, sign as nodeSign } from "crypto";
+var import_crypto6 = require("crypto");
 
 // src/signature/serialize.ts
 function canonicalStringify(obj) {
@@ -578,7 +610,7 @@ function serialize(data, strategy, fields) {
 
 // src/signature/sign.ts
 function parsePrivateKey(key) {
-  const keyObject = createPrivateKey2({
+  const keyObject = (0, import_crypto6.createPrivateKey)({
     key: Buffer.from(key, "base64"),
     format: "der",
     type: "pkcs8"
@@ -595,7 +627,7 @@ function sign2(data, privateKey, options) {
     options?.strategy ?? "canonical",
     options?.fields ?? []
   );
-  return nodeSign(
+  return (0, import_crypto6.sign)(
     null,
     // ✅ Ed25519 requires null
     Buffer.from(serialized),
@@ -604,9 +636,9 @@ function sign2(data, privateKey, options) {
 }
 
 // src/signature/verify.ts
-import { createPublicKey as createPublicKey2, verify as nodeVerify } from "crypto";
+var import_crypto7 = require("crypto");
 function parsePublicKey(key) {
-  const keyObject = createPublicKey2({
+  const keyObject = (0, import_crypto7.createPublicKey)({
     key: Buffer.from(key, "base64"),
     format: "der",
     type: "spki"
@@ -623,7 +655,7 @@ function verify(data, signature, publicKey, options) {
     options?.strategy ?? "canonical",
     options?.fields ?? []
   );
-  return nodeVerify(
+  return (0, import_crypto7.verify)(
     null,
     // ✅ required for ed25519
     Buffer.from(serialized),
@@ -852,28 +884,28 @@ __export(hash_exports, {
 });
 
 // src/hash/hash.ts
-import { createHash } from "crypto";
+var import_crypto8 = require("crypto");
 function hash(data) {
-  const hash2 = createHash("sha256");
+  const hash2 = (0, import_crypto8.createHash)("sha256");
   hash2.update(data);
   return hash2.digest("hex");
 }
 
 // src/hash/hashHmac.ts
-import { createHmac } from "crypto";
+var import_crypto9 = require("crypto");
 function hashHmac(secret, data) {
-  return createHmac("sha256", secret).update(data).digest("hex");
+  return (0, import_crypto9.createHmac)("sha256", secret).update(data).digest("hex");
 }
 
 // src/hash/verifyHmac.ts
-import { createHmac as createHmac2, timingSafeEqual } from "crypto";
+var import_crypto10 = require("crypto");
 function verifyHmac(secret, data, expectedHex) {
-  const actual = createHmac2("sha256", secret).update(data).digest();
+  const actual = (0, import_crypto10.createHmac)("sha256", secret).update(data).digest();
   const expected = Buffer.from(expectedHex, "hex");
   if (actual.length !== expected.length) {
     return false;
   }
-  return timingSafeEqual(actual, expected);
+  return (0, import_crypto10.timingSafeEqual)(actual, expected);
 }
 
 // src/keys/index.ts
@@ -885,10 +917,10 @@ __export(keys_exports, {
 });
 
 // src/keys/rsa.ts
-import { generateKeyPair } from "crypto";
+var import_crypto11 = require("crypto");
 function generateRSAKeyPair() {
   return new Promise((resolve, reject) => {
-    generateKeyPair(
+    (0, import_crypto11.generateKeyPair)(
       "rsa",
       {
         modulusLength: 2048,
@@ -915,9 +947,9 @@ function generateRSAKeyPair() {
 }
 
 // src/keys/ed25519.ts
-import { generateKeyPairSync as generateKeyPairSync2 } from "crypto";
+var import_crypto12 = require("crypto");
 function generateEd25519KeyPair() {
-  const { publicKey, privateKey } = generateKeyPairSync2("ed25519", {
+  const { publicKey, privateKey } = (0, import_crypto12.generateKeyPairSync)("ed25519", {
     publicKeyEncoding: {
       type: "spki",
       format: "der"
@@ -934,9 +966,9 @@ function generateEd25519KeyPair() {
 }
 
 // src/keys/x25519.ts
-import { generateKeyPairSync as generateKeyPairSync3 } from "crypto";
+var import_crypto13 = require("crypto");
 function generateX25519KeyPair() {
-  const { publicKey, privateKey } = generateKeyPairSync3("x25519", {
+  const { publicKey, privateKey } = (0, import_crypto13.generateKeyPairSync)("x25519", {
     publicKeyEncoding: {
       type: "spki",
       format: "der"
@@ -961,9 +993,9 @@ function generateAuthenticatedKeySet() {
 }
 
 // src/keys/ecdh.ts
-import { generateKeyPairSync as generateKeyPairSync4 } from "crypto";
+var import_crypto14 = require("crypto");
 function generateECDHKeyPair() {
-  const { publicKey, privateKey } = generateKeyPairSync4("x25519");
+  const { publicKey, privateKey } = (0, import_crypto14.generateKeyPairSync)("x25519");
   return {
     publicKey: publicKey.export({ type: "spki", format: "der" }).toString("base64"),
     privateKey: privateKey.export({ type: "pkcs8", format: "der" }).toString("base64")
@@ -1044,7 +1076,7 @@ __export(otp_exports, {
 });
 
 // src/otp/totp.ts
-import { createHmac as createHmac3 } from "crypto";
+var import_crypto15 = require("crypto");
 function base32ToBuffer(base32) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   let bits = "";
@@ -1067,34 +1099,24 @@ function generateTOTP(secret, digits = 6, period = 30, timestamp = Date.now()) {
     buffer[i] = counter & 255;
     counter >>= 8;
   }
-  const hmac = createHmac3("sha1", key).update(buffer).digest();
+  const hmac = (0, import_crypto15.createHmac)("sha1", key).update(buffer).digest();
   const offset = hmac[hmac.length - 1] & 15;
   const code = (hmac[offset] & 127) << 24 | (hmac[offset + 1] & 255) << 16 | (hmac[offset + 2] & 255) << 8 | hmac[offset + 3] & 255;
   return (code % 10 ** digits).toString().padStart(digits, "0");
 }
 
 // src/otp/otp.ts
-import { randomBytes as randomBytes4 } from "crypto";
+var import_crypto16 = require("crypto");
 function generateOTP(length = 6) {
   const max = 10 ** length;
-  const randomNumber = parseInt(randomBytes4(4).toString("hex"), 16) % max;
+  const randomNumber = parseInt((0, import_crypto16.randomBytes)(4).toString("hex"), 16) % max;
   return randomNumber.toString().padStart(length, "0");
 }
 
 // src/crypto/decrypt.ts
-import { createReadStream as createReadStream2, createWriteStream as createWriteStream2 } from "fs";
-import {
-  createDecipheriv,
-  privateDecrypt,
-  constants as constants2,
-  scryptSync as scryptSync2,
-  hkdfSync as hkdfSync2,
-  createPrivateKey as createPrivateKey3,
-  createPublicKey as createPublicKey3,
-  diffieHellman as diffieHellman2,
-  verify as verify2
-} from "crypto";
-import { pipeline as pipeline2 } from "stream/promises";
+var import_fs2 = require("fs");
+var import_crypto17 = require("crypto");
+var import_promises3 = require("stream/promises");
 function validateTimestamp(timestamp, maxAge = MESSAGE_MAX_AGE_MS) {
   const now = Date.now();
   const age = now - timestamp;
@@ -1142,7 +1164,7 @@ async function decrypt(options, data, inputPath, outputPath) {
 async function decryptFile(options, inputPath, outputPath) {
   async function readFileHeader(filePath) {
     return new Promise((resolve, reject) => {
-      const stream = createReadStream2(filePath, { start: 0 });
+      const stream = (0, import_fs2.createReadStream)(filePath, { start: 0 });
       const chunks = [];
       let bytesRead = 0;
       let headerLength = 0;
@@ -1198,8 +1220,8 @@ async function decryptFileStreaming(options, inputPath, outputPath, header, data
         throw new Error("Salt missing from encrypted file");
       }
       const salt = Buffer.from(header.salt, "base64");
-      const key = scryptSync2(options.password, salt, 32);
-      decipher = createDecipheriv("aes-256-gcm", key, iv);
+      const key = (0, import_crypto17.scryptSync)(options.password, salt, 32);
+      decipher = (0, import_crypto17.createDecipheriv)("aes-256-gcm", key, iv);
       decipher.setAuthTag(authTag);
       break;
     case "openEnvelope":
@@ -1210,21 +1232,21 @@ async function decryptFileStreaming(options, inputPath, outputPath, header, data
         throw new Error("Encrypted key missing from file header");
       }
       const encryptedAESKey = Buffer.from(header.encryptedKey, "base64");
-      const recipientPrivKey = createPrivateKey3({
+      const recipientPrivKey = (0, import_crypto17.createPrivateKey)({
         key: Buffer.from(options.recipientPrivateKey, "base64"),
         format: "der",
         type: "pkcs8"
       });
-      const aesKey = privateDecrypt(
+      const aesKey = (0, import_crypto17.privateDecrypt)(
         {
           key: recipientPrivKey,
           // Use KeyObject instead of string
-          padding: constants2.RSA_PKCS1_OAEP_PADDING,
+          padding: import_crypto17.constants.RSA_PKCS1_OAEP_PADDING,
           oaepHash: "sha256"
         },
         encryptedAESKey
       );
-      decipher = createDecipheriv("aes-256-gcm", aesKey, iv);
+      decipher = (0, import_crypto17.createDecipheriv)("aes-256-gcm", aesKey, iv);
       decipher.setAuthTag(authTag);
       break;
     case "secure-channel":
@@ -1239,7 +1261,7 @@ async function decryptFileStreaming(options, inputPath, outputPath, header, data
         header.ephemeralPublicKey,
         Buffer.from(header.salt, "base64")
       );
-      decipher = createDecipheriv("aes-256-gcm", sharedSecret, iv);
+      decipher = (0, import_crypto17.createDecipheriv)("aes-256-gcm", sharedSecret, iv);
       decipher.setAuthTag(authTag);
       break;
     case "authenticated-channel":
@@ -1258,7 +1280,7 @@ async function decryptFileStreaming(options, inputPath, outputPath, header, data
           "Ephemeral key, salt, or signature missing from header"
         );
       }
-      const senderPubKey = createPublicKey3({
+      const senderPubKey = (0, import_crypto17.createPublicKey)({
         key: Buffer.from(options.senderPublicKey, "base64"),
         format: "der",
         type: "spki"
@@ -1268,7 +1290,7 @@ async function decryptFileStreaming(options, inputPath, outputPath, header, data
         iv,
         authTag
       ]);
-      const signatureValid = verify2(
+      const signatureValid = (0, import_crypto17.verify)(
         null,
         dataToVerify,
         senderPubKey,
@@ -1282,13 +1304,13 @@ async function decryptFileStreaming(options, inputPath, outputPath, header, data
         header.ephemeralPublicKey,
         Buffer.from(header.salt, "base64")
       );
-      decipher = createDecipheriv("aes-256-gcm", sharedSecretAuth, iv);
+      decipher = (0, import_crypto17.createDecipheriv)("aes-256-gcm", sharedSecretAuth, iv);
       decipher.setAuthTag(authTag);
       break;
   }
-  const inputStream = createReadStream2(inputPath, { start: dataOffset });
-  const outputStream = createWriteStream2(outputPath);
-  await pipeline2(inputStream, decipher, outputStream);
+  const inputStream = (0, import_fs2.createReadStream)(inputPath, { start: dataOffset });
+  const outputStream = (0, import_fs2.createWriteStream)(outputPath);
+  await (0, import_promises3.pipeline)(inputStream, decipher, outputStream);
   console.log("\u2705 File decrypted successfully");
 }
 function decryptMessage(options, encryptedHex) {
@@ -1315,8 +1337,8 @@ function decryptMessage(options, encryptedHex) {
       const tagSymmetric = buffer.subarray(offset, offset + 16);
       offset += 16;
       const encryptedSymmetric = buffer.subarray(offset);
-      const key = scryptSync2(options.password, salt, 32);
-      const decipherSymmetric = createDecipheriv(
+      const key = (0, import_crypto17.scryptSync)(options.password, salt, 32);
+      const decipherSymmetric = (0, import_crypto17.createDecipheriv)(
         "aes-256-gcm",
         key,
         ivSymmetric
@@ -1340,21 +1362,21 @@ function decryptMessage(options, encryptedHex) {
       const tagRSA = buffer.subarray(offset, offset + 16);
       offset += 16;
       const encryptedRSA = buffer.subarray(offset);
-      const recipientPrivKey = createPrivateKey3({
+      const recipientPrivKey = (0, import_crypto17.createPrivateKey)({
         key: Buffer.from(options.recipientPrivateKey, "base64"),
         format: "der",
         type: "pkcs8"
       });
-      const aesKey = privateDecrypt(
+      const aesKey = (0, import_crypto17.privateDecrypt)(
         {
           key: recipientPrivKey,
           // Use KeyObject instead of string
-          padding: constants2.RSA_PKCS1_OAEP_PADDING,
+          padding: import_crypto17.constants.RSA_PKCS1_OAEP_PADDING,
           oaepHash: "sha256"
         },
         encryptedKey
       );
-      const decipherRSA = createDecipheriv("aes-256-gcm", aesKey, ivRSA);
+      const decipherRSA = (0, import_crypto17.createDecipheriv)("aes-256-gcm", aesKey, ivRSA);
       decipherRSA.setAuthTag(tagRSA);
       decryptedData = Buffer.concat([
         decipherRSA.update(encryptedRSA),
@@ -1386,7 +1408,7 @@ function decryptMessage(options, encryptedHex) {
         ephemeralPublicKey.toString("base64"),
         saltECDH
       );
-      const decipherECDH = createDecipheriv(
+      const decipherECDH = (0, import_crypto17.createDecipheriv)(
         "aes-256-gcm",
         sharedSecret,
         ivECDH
@@ -1440,7 +1462,7 @@ function decryptMessage(options, encryptedHex) {
       const tagAuth = buffer.subarray(offset, offset + 16);
       offset += 16;
       const encryptedAuth = buffer.subarray(offset);
-      const senderPubKey = createPublicKey3({
+      const senderPubKey = (0, import_crypto17.createPublicKey)({
         key: Buffer.from(options.senderPublicKey, "base64"),
         format: "der",
         type: "spki"
@@ -1450,7 +1472,7 @@ function decryptMessage(options, encryptedHex) {
         ivAuth,
         tagAuth
       ]);
-      const signatureValid = verify2(
+      const signatureValid = (0, import_crypto17.verify)(
         null,
         dataToVerify,
         senderPubKey,
@@ -1465,7 +1487,7 @@ function decryptMessage(options, encryptedHex) {
         ephemeralPublicKeyAuth.toString("base64"),
         saltAuth
       );
-      const decipherAuth = createDecipheriv(
+      const decipherAuth = (0, import_crypto17.createDecipheriv)(
         "aes-256-gcm",
         sharedSecretAuth,
         ivAuth
@@ -1493,22 +1515,22 @@ function decryptMessage(options, encryptedHex) {
   return { data: finalData, metadata };
 }
 function deriveAESKeyForDecryption(recipientPrivateKeyStr, ephemeralPublicKeyStr, salt) {
-  const recipientPrivateKey = createPrivateKey3({
+  const recipientPrivateKey = (0, import_crypto17.createPrivateKey)({
     key: Buffer.from(recipientPrivateKeyStr, "base64"),
     format: "der",
     type: "pkcs8"
   });
-  const ephemeralPublicKey = createPublicKey3({
+  const ephemeralPublicKey = (0, import_crypto17.createPublicKey)({
     key: Buffer.from(ephemeralPublicKeyStr, "base64"),
     format: "der",
     type: "spki"
   });
-  const sharedSecret = diffieHellman2({
+  const sharedSecret = (0, import_crypto17.diffieHellman)({
     privateKey: recipientPrivateKey,
     publicKey: ephemeralPublicKey
   });
   const aesKey = Buffer.from(
-    hkdfSync2("sha256", sharedSecret, salt, "secure-channel-aes-key", 32)
+    (0, import_crypto17.hkdfSync)("sha256", sharedSecret, salt, "secure-channel-aes-key", 32)
   );
   return aesKey;
 }
@@ -1517,7 +1539,8 @@ function deriveAESKeyForDecryption(recipientPrivateKeyStr, ephemeralPublicKeyStr
 var LIBRARY_VERSION = VERSION;
 var MINIMUM_PASSWORD_LENGTH = MIN_PASSWORD_LENGTH;
 var MAX_MESSAGE_AGE = MESSAGE_MAX_AGE_MS;
-export {
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
   LIBRARY_VERSION,
   MAX_MESSAGE_AGE,
   MESSAGE_MAX_AGE_MS,
@@ -1532,15 +1555,15 @@ export {
   encrypt,
   encryptFileStreaming,
   encryptMessage,
-  hash_exports as hash,
-  keys_exports as keys,
-  otp_exports as otp,
-  password_exports as password,
-  signature_exports as signature,
-  uuid_exports as uuid,
+  hash,
+  keys,
+  otp,
+  password,
+  signature,
+  uuid,
   validatePassword,
   validatePrivateKey,
   validatePublicKey,
   validateTimestamp,
   validateVersion
-};
+});

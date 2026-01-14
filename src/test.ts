@@ -1,14 +1,15 @@
-import { randomBytes, scryptSync } from "crypto";
-import { generateTOTP } from "./otp/totp";
-import { generate } from "./password";
+import { Key } from "./keys";
+import Signer from "./signature";
 async function test() {
-  const pwd = generate();
-  console.log(pwd);
-  const salt = randomBytes(16);
-  const hashed = scryptSync(pwd, salt, 32);
-  console.log(hashed.toString("base64"));
-  const totp = generateTOTP(hashed.toString("base64"));
-  console.log(totp);
+  const keys = await Key.generate("sign");
+  const clas = Signer;
+
+  const sign = clas.envelope("erbert", keys.privateKey as string);
+  const verif = clas.openEnvelope(
+    { data: sign.data, signature: sign.signature },
+    keys.publicKey as string
+  );
+  console.log(sign, verif);
 }
 
 test();

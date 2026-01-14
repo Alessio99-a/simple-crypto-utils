@@ -1,10 +1,16 @@
 import { randomBytes } from "crypto";
 
 export interface PasswordOptions {
+  /** Length of the password (default: 16) */
   length?: number;
-  hash?: boolean;
+
+  /** Include letters in the password (default: true) */
   letters?: boolean;
+
+  /** Include numbers in the password (default: true) */
   numbers?: boolean;
+
+  /** Include symbols in the password (default: true) */
   symbols?: boolean;
 }
 
@@ -15,18 +21,43 @@ const charsetMap: Readonly<Record<string, string>> = {
 };
 
 // Conditional return type
-export function generate(length?: number): string;
-export function generate(options: PasswordOptions & { hash?: false }): string;
-export function generate(
+export function generatePassword(length?: number): string;
+export function generatePassword(options: PasswordOptions): string;
+export function generatePassword(
   options: PasswordOptions & { hash: true }
 ): Promise<string>;
 
-// Implementation
-export function generate(
+/**
+ * Generates a secure random password.
+ *
+ * The password can include letters, numbers, and symbols. The length
+ * must be between 1 and 1024. Optionally, the password could be hashed
+ * (if `hash: true`), but hashing is currently commented out.
+ *
+ * @param lengthOrOptions - Either the length of the password or an options object.
+ * @returns A randomly generated password as a string.
+ *
+ * @example
+ * ```ts
+ * import { generatePassword } from "./password";
+ *
+ * // Generate a default password of length 16
+ * const pw1 = generatePassword();
+ * console.log(pw1);
+ *
+ * // Generate a password of length 32 with only letters and numbers
+ * const pw2 = generatePassword({ length: 32, symbols: false });
+ * console.log(pw2);
+ *
+ * // Generate a password of length 12 using the numeric charset only
+ * const pw3 = generatePassword({ length: 12, letters: false, symbols: false });
+ * console.log(pw3);
+ * ```
+ */
+export function generatePassword(
   lengthOrOptions?: number | PasswordOptions
 ): string | Promise<string> {
   let length = 16;
-  let hash = false;
   let letters = true;
   let numbers = true;
   let symbols = true;
@@ -35,7 +66,6 @@ export function generate(
     length = lengthOrOptions;
   } else if (typeof lengthOrOptions === "object") {
     length = lengthOrOptions.length ?? 16;
-    hash = lengthOrOptions.hash ?? false;
     letters = lengthOrOptions.letters ?? true;
     numbers = lengthOrOptions.numbers ?? true;
     symbols = lengthOrOptions.symbols ?? true;
@@ -59,10 +89,6 @@ export function generate(
     bytes,
     (byte) => charset[byte % charset.length]
   ).join("");
-
-  // if (hash) {
-  //   return hash(password);
-  // }
 
   return password;
 }

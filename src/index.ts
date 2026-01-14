@@ -23,6 +23,36 @@ import {
   MESSAGE_MAX_AGE_MS,
 } from "./crypto/encrypt";
 
+// ============================================
+// PASSWORD
+// ============================================
+export * as password from "./password";
+
+// ============================================
+// UUID
+// ============================================
+export * as uuid from "./uuid";
+
+// ============================================
+// SIGNATURE
+// ============================================
+export * as signature from "./signature";
+
+// ============================================
+// HASH
+// ============================================
+export * as hash from "./hash";
+
+// ============================================
+// Key Generation
+// ============================================
+export * as keys from "./keys";
+
+// ============================================
+// OTP / TOTP
+// ============================================
+export * as otp from "./otp";
+
 export {
   encrypt,
   encryptMessage,
@@ -53,25 +83,9 @@ export {
 } from "./crypto/encrypt";
 
 // ============================================
-// Key Generation Utilities
-// ============================================
-
-export {
-  generateRSAKeyPair,
-  generateX25519KeyPair,
-  generateEd25519KeyPair,
-  generateAuthenticatedKeySet,
-  isValidBase64,
-  getKeyInfo,
-} from "./utlis/utily";
-
-// ============================================
 // Type Definitions
 // ============================================
 
-/**
- * Options for symmetric password-based encryption
- */
 export interface SymmetricPasswordOptions {
   type: "symmetric-password";
   password: string;
@@ -79,9 +93,6 @@ export interface SymmetricPasswordOptions {
   strictMode?: boolean;
 }
 
-/**
- * Options for RSA envelope encryption
- */
 export interface SealEnvelopeOptions {
   type: "sealEnvelope";
   recipientPublicKey: string;
@@ -89,9 +100,6 @@ export interface SealEnvelopeOptions {
   strictMode?: boolean;
 }
 
-/**
- * Options for ECDH secure channel
- */
 export interface SecureChannelOptions {
   type: "secure-channel";
   recipientPublicKey: string;
@@ -100,9 +108,6 @@ export interface SecureChannelOptions {
   strictMode?: boolean;
 }
 
-/**
- * Options for authenticated ECDH channel with signatures
- */
 export interface AuthenticatedChannelOptions {
   type: "authenticated-channel";
   recipientPublicKey: string;
@@ -112,36 +117,24 @@ export interface AuthenticatedChannelOptions {
   strictMode?: boolean;
 }
 
-/**
- * Union type of all encryption options
- */
 export type EncryptOptions =
   | SymmetricPasswordOptions
   | SealEnvelopeOptions
   | SecureChannelOptions
   | AuthenticatedChannelOptions;
 
-/**
- * Options for decrypting symmetric password-based encryption
- */
 export interface DecryptSymmetricOptions {
   type: "symmetric-password";
   password: string;
   strictMode?: boolean;
 }
 
-/**
- * Options for decrypting RSA envelope
- */
 export interface DecryptEnvelopeOptions {
   type: "openEnvelope";
   recipientPrivateKey: string;
   strictMode?: boolean;
 }
 
-/**
- * Options for decrypting ECDH secure channel
- */
 export interface DecryptSecureChannelOptions {
   type: "secure-channel";
   recipientPrivateKey: string;
@@ -149,9 +142,6 @@ export interface DecryptSecureChannelOptions {
   strictMode?: boolean;
 }
 
-/**
- * Options for decrypting authenticated channel
- */
 export interface DecryptAuthenticatedOptions {
   type: "authenticated-channel";
   recipientPrivateKey: string;
@@ -160,27 +150,18 @@ export interface DecryptAuthenticatedOptions {
   strictMode?: boolean;
 }
 
-/**
- * Union type of all decryption options
- */
 export type DecryptOptions =
   | DecryptSymmetricOptions
   | DecryptEnvelopeOptions
   | DecryptSecureChannelOptions
   | DecryptAuthenticatedOptions;
 
-/**
- * Result of encryption operation
- */
 export interface EncryptResult {
   type: "file" | "message";
   data?: string;
   outputPath?: string;
 }
 
-/**
- * Result of decryption operation
- */
 export interface DecryptResult {
   type: "file" | "message";
   data?: string | object;
@@ -191,17 +172,11 @@ export interface DecryptResult {
   };
 }
 
-/**
- * Key pair structure
- */
 export interface KeyPair {
   publicKey: string;
   privateKey: string;
 }
 
-/**
- * Authenticated key set (encryption + signing keys)
- */
 export interface AuthenticatedKeySet {
   encryption: KeyPair;
   signing: KeyPair;
@@ -211,19 +186,8 @@ export interface AuthenticatedKeySet {
 // Constants
 // ============================================
 
-/**
- * Current format version
- */
 export const LIBRARY_VERSION = VERSION;
-
-/**
- * Minimum password length required
- */
 export const MINIMUM_PASSWORD_LENGTH = MIN_PASSWORD_LENGTH;
-
-/**
- * Maximum message age before rejection (replay protection)
- */
 export const MAX_MESSAGE_AGE = MESSAGE_MAX_AGE_MS;
 
 // ============================================
@@ -249,7 +213,7 @@ export const MAX_MESSAGE_AGE = MESSAGE_MAX_AGE_MS;
  * // RSA envelope encryption
  * import { encrypt, decrypt, generateRSAKeyPair } from 'secure-crypto-library';
  *
- * const keys = generateRSAKeyPair();
+ * const keys = await generateRSAKeyPair();
  *
  * const encrypted = await encrypt(
  *   { type: "sealEnvelope", recipientPublicKey: keys.publicKey },
