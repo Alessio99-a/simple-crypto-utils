@@ -56,12 +56,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Alessio99-a/cripto-utils.git"
+    "url": "git+https://github.com/Alessio99-a/simple-crypto-utils.git"
   },
   "bugs": {
-    "url": "https://github.com/Alessio99-a/cripto-utils/issues"
+    "url": "https://github.com/Alessio99-a/simple-crypto-utils.git/issues"
   },
-  "homepage": "https://github.com/Alessio99-a/cripto-utils#readme",
+  "homepage": "https://github.com/Alessio99-a/simple-crypto-utils.git#readme",
   "dependencies": {
     "tslib": "^2.8.1"
   },

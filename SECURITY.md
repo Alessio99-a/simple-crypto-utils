@@ -168,7 +168,7 @@ password: "MyPassword123!";
 password: "MyStr0ng!Password#2024";
 
 // ✅ BEST - Generated password
-import { generatePassword } from "crypto-utils";
+import { generatePassword } from "simple-crypto-utils";
 const password = generatePassword(20);
 ```
 
@@ -195,7 +195,7 @@ const isValid = await verifyPassword(userPassword, storedHash);
 
 ```typescript
 // ✅ Generate secure secrets
-import { generatePassword } from "crypto-utils";
+import { generatePassword } from "simple-crypto-utils";
 const totpSecret = generatePassword(32, {
   symbols: false, // Base32 compatible
 });
@@ -464,7 +464,7 @@ If you discover a security vulnerability:
 
 ## 🔄 Security Updates
 
-- Check for updates: `npm outdated crypto-utils`
+- Check for updates: `npm outdated simple-crypto-utils`
 - Review CHANGELOG.md for security-related changes
 - Enable GitHub notifications for releases
 - Run `npm audit` regularly

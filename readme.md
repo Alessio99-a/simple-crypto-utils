@@ -66,7 +66,7 @@ A comprehensive TypeScript cryptography toolkit for learning and understanding m
 ## 📦 Installation
 
 ```bash
-npm install crypto-utils
+npm install simple-crypto-utils
 ```
 
 ## 🚀 Quick Start
@@ -74,7 +74,7 @@ npm install crypto-utils
 ### 1. Password-Based Encryption (Symmetric)
 
 ```typescript
-import { encrypt, decrypt } from "crypto-utils";
+import { encrypt, decrypt } from "simple-crypto-utils";
 
 // Encrypt
 const encrypted = await encrypt(
@@ -94,7 +94,11 @@ console.log(decrypted.data); // "Secret message"
 ### 2. Password Management
 
 ```typescript
-import { generatePassword, hashPassword, verifyPassword } from "crypto-utils";
+import {
+  generatePassword,
+  hashPassword,
+  verifyPassword,
+} from "simple-crypto-utils";
 
 // Generate secure password
 const password = generatePassword(16); // "aB3$xK9@mPq2#R5z"
@@ -111,7 +115,7 @@ console.log(isValid); // true
 ### 3. Two-Factor Authentication (OTP/TOTP)
 
 ```typescript
-import { generateOTP, generateTOTP } from "crypto-utils";
+import { generateOTP, generateTOTP } from "simple-crypto-utils";
 
 // Generate one-time password (HOTP)
 const otp = generateOTP(); // "123456"
@@ -129,7 +133,7 @@ console.log(isValid); // true if within time window
 ### 4. UUID Generation
 
 ```typescript
-import { generateUUID } from "crypto-utils";
+import { generateUUID } from "simple-crypto-utils";
 
 const id = generateUUID();
 console.log(id); // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
@@ -138,7 +142,7 @@ console.log(id); // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 ### 5. Hashing & HMAC
 
 ```typescript
-import { hash, hmac } from "crypto-utils";
+import { hash, hmac } from "simple-crypto-utils";
 
 // Hash data
 const dataHash = hash("sensitive data", "sha256");
@@ -154,7 +158,7 @@ const signature = hashHmac(hashedMessage, "secret-key", "sha256");
 
 ```typescript
 // Using the class Key (recommend)
-import { Key } from "crypto-utils";
+import { Key } from "simple-crypto-utils";
 
 const keys = await Key.generate("sign");
 console.log(keys);
@@ -164,7 +168,7 @@ console.log(keys);
 ### 7. Public Key Encryption (RSA Envelope)
 
 ```typescript
-import { encrypt, decrypt, generateRSAKeyPair } from "crypto-utils";
+import { encrypt, decrypt, generateRSAKeyPair } from "simple-crypto-utils";
 
 // Generate keys
 const { publicKey, privateKey } = generateRSAKeyPair();
@@ -185,7 +189,7 @@ const decrypted = await decrypt(
 ### 8. Secure Channel (ECDH with Forward Secrecy)
 
 ```typescript
-import { encrypt, decrypt, generateX25519KeyPair } from "crypto-utils";
+import { encrypt, decrypt, generateX25519KeyPair } from "simple-crypto-utils";
 
 // Bob generates keys
 const bob = generateX25519KeyPair();
@@ -206,7 +210,11 @@ const decrypted = await decrypt(
 ### 9. Authenticated Channel (ECDH + Ed25519 Signatures)
 
 ```typescript
-import { encrypt, decrypt, generateAuthenticatedKeySet } from "crypto-utils";
+import {
+  encrypt,
+  decrypt,
+  generateAuthenticatedKeySet,
+} from "simple-crypto-utils";
 
 // Generate keys for both parties
 const alice = generateAuthenticatedKeySet();
@@ -240,7 +248,7 @@ console.log(decrypted.metadata.authenticated); // true
 All encryption modes support file encryption with streaming for memory efficiency:
 
 ```typescript
-import { encrypt, decrypt } from "crypto-utils";
+import { encrypt, decrypt } from "simple-crypto-utils";
 
 // Encrypt file
 await encrypt(
@@ -478,8 +486,8 @@ Utilities
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/crypto-utils.git
-cd crypto-utils
+git clone https://github.com/yourusername/simple-crypto-utils.git
+cd simple-crypto-utils
 
 # Install dependencies
 npm install
@@ -541,7 +549,7 @@ Create a script to generate keys for testing:
 
 ```typescript
 // generate-keys.js
-import { Key } from "crypto-utils";
+import { Key } from "simple-crypto-utils";
 
 const fs = require("fs");
 
