@@ -1,6 +1,6 @@
 {
   "name": "simple-crypto-utils",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A TypeScript cryptography utility library for educational purposes only. Not intended for production use.",
   "type": "module",
   "exports": {
