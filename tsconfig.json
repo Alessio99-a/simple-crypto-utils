@@ -16,7 +16,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "removeComments": true,
+    "removeComments": false,
     "importHelpers": true,
 
     /* Interop Constraints */
