@@ -1,37 +1,13 @@
 {
-  "name": "cripto-utils",
+  "name": "simple-crypto-utils",
   "version": "1.0.0",
   "description": "A TypeScript cryptography utility library for educational purposes only. Not intended for production use.",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./crypto": {
-      "import": "./dist/crypto/index.mjs",
-      "require": "./dist/crypto/index.cjs"
-    },
-    "./hash": {
-      "import": "./dist/hash/index.mjs",
-      "require": "./dist/hash/index.cjs"
-    },
-    "./otp": {
-      "import": "./dist/otp/index.mjs",
-      "require": "./dist/otp/index.cjs"
-    },
-    "./password": {
-      "import": "./dist/password/index.mjs",
-      "require": "./dist/password/index.cjs"
-    },
-    "./signature": {
-      "import": "./dist/signature/index.mjs",
-      "require": "./dist/signature/index.cjs"
-    },
-    "./uuid": {
-      "import": "./dist/signature/index.mjs",
-      "require": "./dist/signature/index.cjs"
     }
   },
   "types": "./dist/index.d.ts",
@@ -40,7 +16,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "test": "echo \"No tests yet\" && exit 0"
   },
   "keywords": [
