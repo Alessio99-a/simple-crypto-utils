@@ -1,5 +1,5 @@
 /**
- * Secure Crypto Library - Main Export File
+ * Crypto Utils - Main Export File
  *
  * A comprehensive educational cryptography library implementing:
  * - Symmetric encryption (AES-256-GCM with password)
@@ -8,8 +8,8 @@
  * - Digital signatures (Ed25519)
  * - Forward secrecy
  * - Replay attack prevention
- *
- * @module secure-crypto-library
+ * -
+ * @module crypto-utils
  * @version 1.0.0
  */
 
@@ -197,7 +197,7 @@ export const MAX_MESSAGE_AGE = MESSAGE_MAX_AGE_MS;
 /**
  * @example
  * // Symmetric encryption
- * import { encrypt, decrypt } from 'secure-crypto-library';
+ * import { encrypt, decrypt } from 'crypto-utils';
  *
  * const encrypted = await encrypt(
  *   { type: "symmetric-password", password: "MySecurePass123!" },
@@ -211,7 +211,7 @@ export const MAX_MESSAGE_AGE = MESSAGE_MAX_AGE_MS;
  *
  * @example
  * // RSA envelope encryption
- * import { encrypt, decrypt, generateRSAKeyPair } from 'secure-crypto-library';
+ * import { encrypt, decrypt, generateRSAKeyPair } from 'crypto-utils';
  *
  * const keys = await generateRSAKeyPair();
  *
@@ -227,7 +227,7 @@ export const MAX_MESSAGE_AGE = MESSAGE_MAX_AGE_MS;
  *
  * @example
  * // Secure channel with forward secrecy
- * import { encrypt, decrypt, generateX25519KeyPair } from 'secure-crypto-library';
+ * import { encrypt, decrypt, generateX25519KeyPair } from 'crypto-utils';
  *
  * const bob = generateX25519KeyPair();
  *
@@ -243,7 +243,7 @@ export const MAX_MESSAGE_AGE = MESSAGE_MAX_AGE_MS;
  *
  * @example
  * // Authenticated channel with signatures
- * import { encrypt, decrypt, generateAuthenticatedKeySet } from 'secure-crypto-library';
+ * import { encrypt, decrypt, generateAuthenticatedKeySet } from 'crypto-utils';
  *
  * const alice = generateAuthenticatedKeySet();
  * const bob = generateAuthenticatedKeySet();
